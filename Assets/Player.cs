@@ -341,7 +341,7 @@ public class Player : MonoBehaviour {
         togglePrompt.SetActive(false);
         foreach (var powerBox in powerBoxes) {
             var toBox = powerBox.transform.position - transform.position;
-            if (powerBox.CanBeToggled() && toBox.sqrMagnitude < 1 && Vector3.Angle(-powerBox.transform.right, toBox.normalized) < 80) {
+            if (toBox.sqrMagnitude < 1 && Vector3.Angle(-powerBox.transform.right, toBox.normalized) < 80) {
                 togglePrompt.SetActive(true);
                 togglePrompt.transform.position = powerBox.transform.position;
                 if (Input.GetKey(KeyCode.K)) {

@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
@@ -9,22 +10,23 @@ public class PowerBox : MonoBehaviour {
     [SerializeField] private Color onColor;
     [SerializeField] private Color offColor;
 
-    private bool toggled = false;
+    private float lastToggleTimer = 0.5f;
 
     public void Start() {
+        consumer.OnPowerToggle(powerOn);
         UpdatePowerLineGfx();
     }
 
-    public bool CanBeToggled() {
-        return !toggled;
+    private void FixedUpdate() {
+        lastToggleTimer += Time.fixedDeltaTime;
     }
 
     public void Toggle() {
-        if (toggled) {
+        if (lastToggleTimer < 0.5f) {
             return;
         }
 
-        toggled = true;
+        lastToggleTimer = 0;
         powerOn = !powerOn;
         consumer.OnPowerToggle(powerOn);
         UpdatePowerLineGfx();

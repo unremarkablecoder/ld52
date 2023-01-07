@@ -3,27 +3,32 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using Random = UnityEngine.Random;
 
 public enum EnemyState {
     Idle,
     StandingAtPoint,
     WalkingToPoint,
-    Looking,
-    Investigating,
+    LookingAround,
     Chasing,
+    Attacking,
     BeingHarvested,
 }
 
 public class Guard : MonoBehaviour {
+    [SerializeField] private GameObject alertIcon;
     [SerializeField] private VisionCone visionCone;
     [SerializeField] private VisionCone alertVisionCone;
     [SerializeField] private PatrolPoint[] patrolPoints;
     [SerializeField] private float walkSpeed = 2;
+    [SerializeField] private float runSpeed = 3;
     [SerializeField] private float visionAngle = 70;
     [SerializeField] private float visionLength = 8;
     [SerializeField] private float radius = 0.5f;
     [SerializeField] private float alertSpeed = 10.0f;
     [SerializeField] private float alertSpeedDecrease = 5.0f;
+    [SerializeField] private float lookAroundChangeSpeed = 0.1f;
+    [SerializeField] private float lookAroundInterval = 0.3f;
     private float rotateSpeed = 720;
     private float targetRot;
 
@@ -36,10 +41,15 @@ public class Guard : MonoBehaviour {
     private float alertVisionLength = 0;
     private Player player;
     private Vector3 pointToInvestigate;
+    private float lookAroundTimer = 0;
+    private float lookAroundVel = 0;
+    private float stateTimer = 0;
 
     public void SetState(EnemyState newState) {
         state = newState;
         pointTimer = 0;
+        lookAroundTimer = 0;
+        stateTimer = 0;
     }
 
     void Awake() {
@@ -58,9 +68,11 @@ public class Guard : MonoBehaviour {
 
     private void FixedUpdate() {
         float dt = Time.fixedDeltaTime;
+        
 
         switch (state) {
             case EnemyState.StandingAtPoint: {
+                alertIcon.SetActive(false);
                 pointTimer += dt;
                 var lookDir = patrolPoints[currentPoint].lookDir;
                 targetRot = Mathf.Atan2(lookDir.y, lookDir.x);
@@ -71,6 +83,7 @@ public class Guard : MonoBehaviour {
             }
                 break;
             case EnemyState.WalkingToPoint: {
+                alertIcon.SetActive(false);
                 pointTimer += dt;
                 int prevPoint = GetPrevPoint();
                 var targetPos = patrolPoints[currentPoint].pos;
@@ -85,11 +98,55 @@ public class Guard : MonoBehaviour {
                 }
             }
                 break;
+            case EnemyState.Chasing: {
+                alertIcon.SetActive(true);
+                alertIcon.transform.rotation = Quaternion.identity;
+                pointTimer += dt;
+                var targetPos = pointToInvestigate;
+                var pos = transform.position;
+                var toTarget = targetPos - pos;
+                var dir = toTarget.normalized;
+                targetRot = Mathf.Atan2(dir.y, dir.x);
+                pos += dir * (runSpeed * dt);
+                transform.position = pos;
+                var toPlayer = player.transform.position - pos;
+                if (toPlayer.magnitude < 1.5f) {
+                    SetState(EnemyState.Attacking);
+                    break;
+                }
+                if (toTarget.sqrMagnitude < 0.01f) {
+                    SetState(EnemyState.LookingAround);
+                }
+            }
+                break;
+            case EnemyState.LookingAround: {
+                alertIcon.SetActive(true);
+                alertIcon.transform.rotation = Quaternion.identity;
+                pointTimer += dt;
+                lookAroundTimer -= dt;
+                if (lookAroundTimer < 0) {
+                    lookAroundTimer = lookAroundInterval;
+                    lookAroundVel = Random.Range(-lookAroundChangeSpeed, lookAroundChangeSpeed);
+                }
+
+                targetRot += lookAroundVel * dt;
+                targetRot = Mathf.Repeat(targetRot, Mathf.PI * 2);
+            }
+                break;
+            case EnemyState.Attacking: {
+                if (stateTimer > 0.5f) {
+                    //game over
+                }
+                
+            }
+                break;
         }
 
         if (state != EnemyState.BeingHarvested) {
             UpdateVision();
         }
+
+        stateTimer += dt;
     }
 
     void UpdateVision() {
@@ -143,6 +200,9 @@ public class Guard : MonoBehaviour {
         if (playerInVision) {
             alertVisionLength = Mathf.Min(visionLength, alertVisionLength + alertSpeed * dt);
             pointToInvestigate = player.transform.position;
+            if (playerInAlertVision) {
+                SetState(EnemyState.Chasing);
+            }
         }
         else {
             alertVisionLength = Mathf.Max(0, alertVisionLength - alertSpeedDecrease * dt);

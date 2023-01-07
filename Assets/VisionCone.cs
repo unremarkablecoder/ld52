@@ -5,7 +5,7 @@ using UnityEngine;
 public class VisionCone : MonoBehaviour {
     private Mesh mesh;
 
-    private const int numEndPoints = 9;
+    private const int numEndPoints = 15;
     private Vector3[] vertices = new Vector3[numEndPoints+1];
 
     private int[] triangles = new int[(numEndPoints-1)*3];

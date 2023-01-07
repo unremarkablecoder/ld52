@@ -32,7 +32,7 @@ public class SecurityCam : MonoBehaviour {
         
         var dir = transform.right;
 
-        const int num = 9;
+        const int num = 15;
         float angleStepRad = visionAngle / num * Mathf.Deg2Rad;
         float dirRad = Mathf.Atan2(dir.y, dir.x);
         Vector3[] endPoints = new Vector3[num];

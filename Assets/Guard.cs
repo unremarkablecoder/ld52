@@ -8,6 +8,7 @@ public enum EnemyState {
     Idle,
     StandingAtPoint,
     WalkingToPoint,
+    Looking,
     Investigating,
     Chasing,
     BeingHarvested,
@@ -21,6 +22,8 @@ public class Guard : MonoBehaviour {
     [SerializeField] private float visionAngle = 70;
     [SerializeField] private float visionLength = 8;
     [SerializeField] private float radius = 0.5f;
+    [SerializeField] private float alertSpeed = 10.0f;
+    [SerializeField] private float alertSpeedDecrease = 5.0f;
     private float rotateSpeed = 720;
     private float targetRot;
 
@@ -31,6 +34,8 @@ public class Guard : MonoBehaviour {
     private int currentPoint = 0;
     private float pointTimer;
     private float alertVisionLength = 0;
+    private Player player;
+    private Vector3 pointToInvestigate;
 
     public void SetState(EnemyState newState) {
         state = newState;
@@ -45,7 +50,7 @@ public class Guard : MonoBehaviour {
 
     int GetPrevPoint() {
         if (currentPoint == 0) {
-           return patrolPoints.Length - 1;
+            return patrolPoints.Length - 1;
         }
 
         return currentPoint - 1;
@@ -76,7 +81,7 @@ public class Guard : MonoBehaviour {
                 pos += dir * (walkSpeed * dt);
                 transform.position = pos;
                 if (toTarget.sqrMagnitude < 0.01f) {
-                     SetState(EnemyState.StandingAtPoint);
+                    SetState(EnemyState.StandingAtPoint);
                 }
             }
                 break;
@@ -90,26 +95,40 @@ public class Guard : MonoBehaviour {
     void UpdateVision() {
         var pos = transform.position;
         float dt = Time.fixedDeltaTime;
-        
+
         float rot = Mathf.Atan2(transform.right.y, transform.right.x);
         rot = Mathf.MoveTowardsAngle(rot * Mathf.Rad2Deg, targetRot * Mathf.Rad2Deg, rotateSpeed * dt) * Mathf.Deg2Rad;
         transform.right = new Vector3(Mathf.Cos(rot), Mathf.Sin(rot));
-        
+
         var dir = transform.right;
 
-        const int num = 9;
+        const int num = 15;
         float angleStepRad = visionAngle / num * Mathf.Deg2Rad;
         float dirRad = Mathf.Atan2(dir.y, dir.x);
         Vector3[] endPoints = new Vector3[num];
         Vector3[] alertEndPoints = new Vector3[num];
+        bool playerInVision = false;
+        bool playerInAlertVision = false;
         for (int i = 0; i < num; ++i) {
-            float rad = dirRad - ((num/2) * angleStepRad) + i * angleStepRad;
+            float rad = dirRad - ((num / 2) * angleStepRad) + i * angleStepRad;
             var lineDir = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad));
             var hitInfo = Physics2D.Linecast(pos, pos + lineDir * visionLength);
             if (hitInfo.collider) {
                 Debug.DrawLine(pos, pos + lineDir * hitInfo.distance, Color.red);
+                if (hitInfo.collider.gameObject.layer == LayerMask.NameToLayer("Player")) {
+                    playerInVision = true;
+                    if (hitInfo.distance < alertVisionLength) {
+                        playerInAlertVision = true;
+                    }
+                    //cast again without player
+                    hitInfo = Physics2D.Linecast(pos, pos + lineDir * visionLength, ~(1 << LayerMask.NameToLayer("Player")));
+                }
+
+            }
+
+            if (hitInfo.collider) {
                 endPoints[i] = pos + lineDir * hitInfo.distance;
-                alertEndPoints[i] = pos + lineDir *  Mathf.Min(hitInfo.distance, alertVisionLength);
+                alertEndPoints[i] = pos + lineDir * Mathf.Min(hitInfo.distance, alertVisionLength);
             }
             else {
                 Debug.DrawLine(pos, pos + lineDir * visionLength, Color.red);
@@ -117,12 +136,24 @@ public class Guard : MonoBehaviour {
                 alertEndPoints[i] = pos + lineDir * alertVisionLength;
             }
         }
+
         visionCone.SetEndPoints(endPoints);
         alertVisionCone.SetEndPoints(alertEndPoints);
 
+        if (playerInVision) {
+            alertVisionLength = Mathf.Min(visionLength, alertVisionLength + alertSpeed * dt);
+            pointToInvestigate = player.transform.position;
+        }
+        else {
+            alertVisionLength = Mathf.Max(0, alertVisionLength - alertSpeedDecrease * dt);
+        }
     }
 
     private void OnDrawGizmos() {
         Handles.Label(transform.position, currentPoint + ", " + state.ToString() + ", " + pointTimer.ToString("F1"));
+    }
+
+    public void SetPlayer(Player player) {
+        this.player = player;
     }
 }

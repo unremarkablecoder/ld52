@@ -237,7 +237,7 @@ public class Player : MonoBehaviour {
 
     Vector3 HandleCollision(Vector3 pos) {
         var oldPos = transform.position;
-        var hitInfo = Physics2D.CircleCast(oldPos, radius, (pos - oldPos).normalized, 0.1f);
+        var hitInfo = Physics2D.CircleCast(oldPos, radius, (pos - oldPos).normalized, 0.1f, ~(1 << LayerMask.NameToLayer("Player")));
         if (hitInfo.collider) {
             return hitInfo.point + hitInfo.normal * (radius + 0.01f);
         }

@@ -286,7 +286,7 @@ Transform:
   - {fileID: 2490985550386870431}
   - {fileID: 171767183322274067}
   m_Father: {fileID: 0}
-  m_RootOrder: 0
+  m_RootOrder: -1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &398015495561515241
 MonoBehaviour:
@@ -317,6 +317,10 @@ PrefabInstance:
       propertyPath: m_Name
       value: VisionCone
       objectReference: {fileID: 0}
+    - target: {fileID: 6985078911597161627, guid: 629794d421a46ca45830f4138b9a78f0, type: 3}
+      propertyPath: m_Materials.Array.data[0]
+      value: 
+      objectReference: {fileID: 2100000, guid: c4385aac26d82f344ab955fdae0e7149, type: 2}
     - target: {fileID: 7295343983817964057, guid: 629794d421a46ca45830f4138b9a78f0, type: 3}
       propertyPath: m_RootOrder
       value: 0

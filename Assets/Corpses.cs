@@ -25,4 +25,13 @@ public class Corpses : MonoBehaviour {
         obj.transform.right = dir;
         corpses.Add(obj);
     }
+
+    public List<GuardCorpse> GetCorpses() {
+        return corpses;
+    }
+    
+    public void RemoveCorpse(GuardCorpse corpse) {
+        corpses.Remove(corpse);
+        Destroy(corpse.gameObject);
+    }
 }

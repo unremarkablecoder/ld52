@@ -6,6 +6,10 @@ public enum PlayerState {
     Idle,
     Walking,
     Killing,
+    PickingUpCorpse,
+    IdleWithCorpse,
+    WalkingWithCorpse,
+    DroppingCorpse
 }
 
 public class Player : MonoBehaviour {
@@ -13,6 +17,8 @@ public class Player : MonoBehaviour {
     [SerializeField] private Blood blood;
     [SerializeField] private Corpses corpses;
     [SerializeField] private GameObject killPrompt;
+    [SerializeField] private GameObject grabPrompt;
+    [SerializeField] private GameObject dropPrompt;
     private float radius = 0.5f;
     private float maxSpeed = 5;
     private float killRange = 0.8f;
@@ -20,6 +26,7 @@ public class Player : MonoBehaviour {
     private float decel = 25;
     private float rotateSpeed = 720;
     private float harvestDuration = 1.167f;
+    private float corpsePickupRadius = 1.1f;
     private Vector3 vel;
     private float targetRot;
 
@@ -29,6 +36,7 @@ public class Player : MonoBehaviour {
     private Camera cam;
 
     private Guard currentKillTarget = null;
+    private GuardCorpse currentCorpseTarget = null;
     private Animator animator;
 
     void Awake() {
@@ -45,63 +53,138 @@ public class Player : MonoBehaviour {
         float dt = Time.fixedDeltaTime;
         var pos = transform.position;
 
-        if (currentState == PlayerState.Idle || currentState == PlayerState.Walking) {
-            if (Input.GetKey(KeyCode.A)) {
-                vel.x -= accel * dt;
-            }
-            else if (Input.GetKey(KeyCode.D)) {
-                vel.x += accel * dt;
-            }
-            else {
-                vel.x -= Mathf.Min(Mathf.Abs(vel.x), decel * dt) * Mathf.Sign(vel.x);
-            }
-
-            if (Input.GetKey(KeyCode.W)) {
-                vel.y += accel * dt;
-            }
-            else if (Input.GetKey(KeyCode.S)) {
-                vel.y -= accel * dt;
-            }
-            else {
-                vel.y -= Mathf.Min(Mathf.Abs(vel.y), decel * dt) * Mathf.Sign(vel.y);
-            }
-
-            vel = Vector3.ClampMagnitude(vel, maxSpeed);
-            if (vel.sqrMagnitude > float.Epsilon) {
-                SetState(PlayerState.Walking);
-                targetRot = Mathf.Atan2(vel.normalized.y, vel.normalized.x);
-            }
-            else {
-                SetState(PlayerState.Idle);
-            }
-
-
-            pos += vel * dt;
-
-            pos = HandleCollision(pos);
-            pos = CheckEnemies(pos);
-
-            transform.position = pos;
-
-            killPrompt.SetActive(currentKillTarget);
-            if (currentKillTarget) {
-                killPrompt.transform.position = currentKillTarget.transform.position;
-                if (Input.GetKey(KeyCode.J)) {
-                    SetState(PlayerState.Killing);
-                    currentKillTarget.SetState(EnemyState.BeingHarvested);
-                }
-            }
-        }
-
-        if (currentState == PlayerState.Killing) {
-            DoKilling(dt);
-        }
+        UpdateState(dt);
 
         float rot = Mathf.Atan2(transform.right.y, transform.right.x);
         rot = Mathf.MoveTowardsAngle(rot * Mathf.Rad2Deg, targetRot * Mathf.Rad2Deg, rotateSpeed * dt) * Mathf.Deg2Rad;
         transform.right = new Vector3(Mathf.Cos(rot), Mathf.Sin(rot));
+    }
+
+    void UpdateState(float dt) {
+        switch (currentState) {
+            case PlayerState.Idle:
+            case PlayerState.Walking:
+                DoIdleOrWalking(dt);
+                break;
+            case PlayerState.Killing:
+                DoKilling(dt);
+                break;
+            case PlayerState.PickingUpCorpse:
+                DoPickingUpCorpse(dt);
+                break;
+            case PlayerState.DroppingCorpse:
+                DoDroppingCorpse(dt);
+                break;
+            case PlayerState.IdleWithCorpse:
+            case PlayerState.WalkingWithCorpse:
+                DoIdleOrWalkingWithCorpse(dt);
+                break;
+        }
 
         stateTimer += dt;
+    }
+
+
+    void UpdateVelocityFromInput(float dt) {
+        if (Input.GetKey(KeyCode.A)) {
+            vel.x -= accel * dt;
+        }
+        else if (Input.GetKey(KeyCode.D)) {
+            vel.x += accel * dt;
+        }
+        else {
+            vel.x -= Mathf.Min(Mathf.Abs(vel.x), decel * dt) * Mathf.Sign(vel.x);
+        }
+
+        if (Input.GetKey(KeyCode.W)) {
+            vel.y += accel * dt;
+        }
+        else if (Input.GetKey(KeyCode.S)) {
+            vel.y -= accel * dt;
+        }
+        else {
+            vel.y -= Mathf.Min(Mathf.Abs(vel.y), decel * dt) * Mathf.Sign(vel.y);
+        }
+
+        vel = Vector3.ClampMagnitude(vel, maxSpeed);
+    }
+
+    void DoIdleOrWalking(float dt) {
+        var pos = transform.position;
+
+        UpdateVelocityFromInput(dt);
+
+        if (vel.sqrMagnitude > float.Epsilon) {
+            SetState(PlayerState.Walking);
+            targetRot = Mathf.Atan2(vel.normalized.y, vel.normalized.x);
+        }
+        else {
+            SetState(PlayerState.Idle);
+        }
+
+        pos += vel * dt;
+
+        pos = HandleCollision(pos);
+        pos = CheckEnemies(pos);
+
+        transform.position = pos;
+
+        dropPrompt.SetActive(false);
+
+        killPrompt.SetActive(currentKillTarget);
+        if (currentKillTarget) {
+            killPrompt.transform.position = currentKillTarget.transform.position;
+            if (Input.GetKey(KeyCode.J)) {
+                SetState(PlayerState.Killing);
+                currentKillTarget.SetState(EnemyState.BeingHarvested);
+                return;
+            }
+        }
+
+        UpdateCorpseTarget();
+        grabPrompt.SetActive(currentCorpseTarget);
+        if (currentCorpseTarget) {
+            grabPrompt.transform.position = currentCorpseTarget.transform.position;
+            if (Input.GetKey(KeyCode.K)) {
+                SetState(PlayerState.PickingUpCorpse);
+                return;
+            }
+        }
+    }
+
+    void DoIdleOrWalkingWithCorpse(float dt) {
+        var pos = transform.position;
+
+        UpdateVelocityFromInput(dt);
+
+        if (vel.sqrMagnitude > float.Epsilon) {
+            SetState(PlayerState.WalkingWithCorpse);
+            targetRot = Mathf.Atan2(vel.normalized.y, vel.normalized.x);
+        }
+        else {
+            SetState(PlayerState.IdleWithCorpse);
+        }
+
+
+        pos += vel * dt;
+
+        pos = HandleCollision(pos);
+        pos = CheckEnemies(pos);
+
+        transform.position = pos;
+
+        grabPrompt.SetActive(false);
+        killPrompt.SetActive(false);
+        dropPrompt.SetActive(true);
+        dropPrompt.transform.position = pos;
+
+        if (Input.GetKey(KeyCode.K)) {
+            SetState(PlayerState.DroppingCorpse);
+        }
+    }
+
+    bool HasCorpse() {
+        return currentState == PlayerState.IdleWithCorpse || currentState == PlayerState.WalkingWithCorpse;
     }
 
     void DoKilling(float dt) {
@@ -114,18 +197,40 @@ public class Player : MonoBehaviour {
         transform.position = pos;
 
         if (Random.Range(0.0f, 1.0f) < 0.15f) {
-            blood.SpawnBlood(currentKillTarget.transform.position, 1.5f, 0.05f, 0.2f); 
+            blood.SpawnBlood(currentKillTarget.transform.position, 1.5f, 0.05f, 0.2f);
         }
 
         if (stateTimer >= harvestDuration) {
             for (int i = 0; i < 3; ++i) {
                 blood.SpawnBlood(currentKillTarget.transform.position, 1.0f, 0.3f, 0.8f);
             }
-            
+
             corpses.SpawnCorpse(currentKillTarget.transform.position, currentKillTarget.transform.right);
 
             enemies.RemoveGuard(currentKillTarget);
             currentKillTarget = null;
+            SetState(PlayerState.Idle);
+        }
+    }
+
+    void DoPickingUpCorpse(float dt) {
+        animator.SetTrigger("pickingUpCorpse");
+        var pos = transform.position;
+        var toTarget = currentCorpseTarget.transform.position - pos;
+        var toTargetDir = toTarget.normalized;
+        pos += ((currentCorpseTarget.transform.position - toTargetDir * (corpsePickupRadius)) - pos) * 0.1f;
+        targetRot = Mathf.Atan2(toTargetDir.y, toTargetDir.x);
+        transform.position = pos;
+        if (stateTimer >= 0.5f) {
+            currentCorpseTarget.transform.parent = transform;
+            SetState(PlayerState.IdleWithCorpse);
+        }
+    }
+
+    private void DoDroppingCorpse(float dt) {
+        animator.SetTrigger("pickingUpCorpse");
+        if (stateTimer >= 0.5f) {
+            currentCorpseTarget.transform.parent = corpses.transform;
             SetState(PlayerState.Idle);
         }
     }
@@ -162,7 +267,6 @@ public class Player : MonoBehaviour {
     void SetState(PlayerState newState) {
         currentState = newState;
         stateTimer = 0;
-        Debug.Log("set state " + newState);
         switch (currentState) {
             case PlayerState.Idle:
                 animator.SetTrigger("idle");
@@ -173,6 +277,24 @@ public class Player : MonoBehaviour {
             case PlayerState.Killing:
                 animator.SetTrigger("kill");
                 break;
+            case PlayerState.PickingUpCorpse:
+            case PlayerState.DroppingCorpse:
+                animator.SetTrigger("pickingUpCorpse");
+                break;
+        }
+    }
+
+    void UpdateCorpseTarget() {
+        var pos = transform.position;
+        var corpseList = corpses.GetCorpses();
+        currentCorpseTarget = null;
+        foreach (var corpse in corpseList) {
+            var toCorpse = corpse.transform.position - pos;
+            float dist = toCorpse.magnitude;
+
+            if (dist < corpsePickupRadius) {
+                currentCorpseTarget = corpse;
+            }
         }
     }
 }

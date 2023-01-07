@@ -10,6 +10,9 @@ public class Enemies : MonoBehaviour {
     // Start is called before the first frame update
     void Start() {
         
+    }
+
+    public void OnLevelLoaded() {
         guards = GameObject.FindObjectsOfType<Guard>().ToList();
         foreach (var guard in guards) {
             guard.SetPlayer(player);

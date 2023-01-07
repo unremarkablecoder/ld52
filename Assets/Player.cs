@@ -9,10 +9,12 @@ public enum PlayerState {
     PickingUpCorpse,
     IdleWithCorpse,
     WalkingWithCorpse,
-    DroppingCorpse
+    DroppingCorpse,
+    Dying
 }
 
 public class Player : MonoBehaviour {
+    [SerializeField] private GameLoop gameLoop;
     [SerializeField] private Enemies enemies;
     [SerializeField] private Blood blood;
     [SerializeField] private Corpses corpses;
@@ -256,7 +258,7 @@ public class Player : MonoBehaviour {
                 pos = guard.transform.position - toGuard.normalized * (radius + guard.Radius);
             }
 
-            if (dist < killRange + radius + guard.Radius) {
+            if (dist < killRange + radius + guard.Radius && guard.CanKill()) {
                 currentKillTarget = guard;
             }
         }
@@ -302,5 +304,23 @@ public class Player : MonoBehaviour {
                 currentCorpseTarget = corpse;
             }
         }
+    }
+
+    public void OnLevelLoaded(Vector3 spawnPos) {
+        gameObject.SetActive(true);
+        transform.position = spawnPos;
+        SetState(PlayerState.Idle);
+        currentCorpseTarget = null;
+        currentKillTarget = null;
+
+    }
+
+    public void Die() {
+        SetState(PlayerState.Dying);
+        gameLoop.Die();
+        dropPrompt.SetActive(false);
+        killPrompt.SetActive(false);
+        dropPrompt.SetActive(false);
+        gameObject.SetActive(false);
     }
 }

@@ -136,13 +136,14 @@ public class Guard : MonoBehaviour {
             case EnemyState.Attacking: {
                 if (stateTimer > 0.5f) {
                     //game over
+                    player.Die();
                 }
                 
             }
                 break;
         }
 
-        if (state != EnemyState.BeingHarvested) {
+        if (state != EnemyState.BeingHarvested && state != EnemyState.Attacking) {
             UpdateVision();
         }
 
@@ -215,5 +216,9 @@ public class Guard : MonoBehaviour {
 
     public void SetPlayer(Player player) {
         this.player = player;
+    }
+
+    public bool CanKill() {
+        return state != EnemyState.Chasing && state != EnemyState.Attacking;
     }
 }

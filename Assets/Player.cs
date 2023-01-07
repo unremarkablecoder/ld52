@@ -277,6 +277,12 @@ public class Player : MonoBehaviour {
             case PlayerState.Killing:
                 animator.SetTrigger("kill");
                 break;
+            case PlayerState.IdleWithCorpse:
+                animator.SetTrigger("idleWithCorpse");
+                break;
+            case PlayerState.WalkingWithCorpse:
+                animator.SetTrigger("walkingWithCorpse");
+                break;
             case PlayerState.PickingUpCorpse:
             case PlayerState.DroppingCorpse:
                 animator.SetTrigger("pickingUpCorpse");

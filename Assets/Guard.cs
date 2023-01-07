@@ -13,6 +13,7 @@ public enum EnemyState {
 }
 
 public class Guard : MonoBehaviour {
+    [SerializeField] private VisionCone visionCone;
     [SerializeField] private PatrolPoint[] patrolPoints;
     [SerializeField] private float walkSpeed = 2;
     [SerializeField] private float visionAngle = 70;
@@ -95,18 +96,22 @@ public class Guard : MonoBehaviour {
 
         const int num = 9;
         float angleStepRad = visionAngle / num * Mathf.Deg2Rad;
-        float dirRad = Mathf.Atan2(dir.y, dir.x); 
+        float dirRad = Mathf.Atan2(dir.y, dir.x);
+        Vector3[] endPoints = new Vector3[num];
         for (int i = 0; i < num; ++i) {
             float rad = dirRad - ((num/2) * angleStepRad) + i * angleStepRad;
             var lineDir = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad));
             var hitInfo = Physics2D.Linecast(pos, pos + lineDir * visionLength);
             if (hitInfo.collider) {
-                Debug.DrawLine(pos, pos + lineDir * hitInfo.distance, Color.red);    
+                Debug.DrawLine(pos, pos + lineDir * hitInfo.distance, Color.red);
+                endPoints[i] = pos + lineDir * hitInfo.distance;
             }
             else {
                 Debug.DrawLine(pos, pos + lineDir * visionLength, Color.red);
+                endPoints[i] = pos + lineDir * visionLength;
             }
         }
+        visionCone.SetEndPoints(endPoints);
 
     }
 

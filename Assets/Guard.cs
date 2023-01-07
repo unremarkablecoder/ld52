@@ -8,12 +8,14 @@ public enum EnemyState {
     Idle,
     StandingAtPoint,
     WalkingToPoint,
+    Investigating,
     Chasing,
     BeingHarvested,
 }
 
 public class Guard : MonoBehaviour {
     [SerializeField] private VisionCone visionCone;
+    [SerializeField] private VisionCone alertVisionCone;
     [SerializeField] private PatrolPoint[] patrolPoints;
     [SerializeField] private float walkSpeed = 2;
     [SerializeField] private float visionAngle = 70;
@@ -28,6 +30,7 @@ public class Guard : MonoBehaviour {
 
     private int currentPoint = 0;
     private float pointTimer;
+    private float alertVisionLength = 0;
 
     public void SetState(EnemyState newState) {
         state = newState;
@@ -98,6 +101,7 @@ public class Guard : MonoBehaviour {
         float angleStepRad = visionAngle / num * Mathf.Deg2Rad;
         float dirRad = Mathf.Atan2(dir.y, dir.x);
         Vector3[] endPoints = new Vector3[num];
+        Vector3[] alertEndPoints = new Vector3[num];
         for (int i = 0; i < num; ++i) {
             float rad = dirRad - ((num/2) * angleStepRad) + i * angleStepRad;
             var lineDir = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad));
@@ -105,13 +109,16 @@ public class Guard : MonoBehaviour {
             if (hitInfo.collider) {
                 Debug.DrawLine(pos, pos + lineDir * hitInfo.distance, Color.red);
                 endPoints[i] = pos + lineDir * hitInfo.distance;
+                alertEndPoints[i] = pos + lineDir *  Mathf.Min(hitInfo.distance, alertVisionLength);
             }
             else {
                 Debug.DrawLine(pos, pos + lineDir * visionLength, Color.red);
                 endPoints[i] = pos + lineDir * visionLength;
+                alertEndPoints[i] = pos + lineDir * alertVisionLength;
             }
         }
         visionCone.SetEndPoints(endPoints);
+        alertVisionCone.SetEndPoints(alertEndPoints);
 
     }
 

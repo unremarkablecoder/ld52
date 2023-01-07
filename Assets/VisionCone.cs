@@ -26,7 +26,7 @@ public class VisionCone : MonoBehaviour {
     }
 
     public void SetEndPoints(Vector3[] endPoints) {
-        for (int i = 1; i < numEndPoints; ++i) {
+        for (int i = 1; i <= numEndPoints; ++i) {
             vertices[i] = transform.worldToLocalMatrix.MultiplyPoint(endPoints[i - 1]);
         }
 

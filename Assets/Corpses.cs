@@ -34,4 +34,11 @@ public class Corpses : MonoBehaviour {
         corpses.Remove(corpse);
         Destroy(corpse.gameObject);
     }
+
+    public void Clear() {
+        foreach (var guardCorpse in corpses) {
+            Destroy(guardCorpse.gameObject);
+        }
+        corpses.Clear();
+    }
 }

@@ -21,8 +21,10 @@ public class Player : MonoBehaviour {
     [SerializeField] private GameObject killPrompt;
     [SerializeField] private GameObject grabPrompt;
     [SerializeField] private GameObject dropPrompt;
+    [SerializeField] private GameObject togglePrompt;
     private float radius = 0.5f;
-    private float maxSpeed = 5;
+    private float maxSpeed = 4.5f;
+    private float maxSpeedWithCorpse = 2.5f;
     private float killRange = 0.8f;
     private float accel = 20;
     private float decel = 25;
@@ -41,6 +43,8 @@ public class Player : MonoBehaviour {
     private GuardCorpse currentCorpseTarget = null;
     private Animator animator;
 
+    private PowerBox[] powerBoxes;
+
     void Awake() {
         cam = Camera.main;
         animator = GetComponent<Animator>();
@@ -52,9 +56,13 @@ public class Player : MonoBehaviour {
 
     // Update is called once per frame
     void FixedUpdate() {
+        if (!animator) {
+            return;
+        }
         float dt = Time.fixedDeltaTime;
         var pos = transform.position;
 
+        togglePrompt.SetActive(false);
         UpdateState(dt);
 
         float rot = Mathf.Atan2(transform.right.y, transform.right.x);
@@ -108,7 +116,8 @@ public class Player : MonoBehaviour {
             vel.y -= Mathf.Min(Mathf.Abs(vel.y), decel * dt) * Mathf.Sign(vel.y);
         }
 
-        vel = Vector3.ClampMagnitude(vel, maxSpeed);
+        vel = Vector3.ClampMagnitude(vel, HasCorpse() ? maxSpeedWithCorpse : maxSpeed);
+        
     }
 
     void DoIdleOrWalking(float dt) {
@@ -152,6 +161,8 @@ public class Player : MonoBehaviour {
                 return;
             }
         }
+        
+        CheckPowerBoxes();
     }
 
     void DoIdleOrWalkingWithCorpse(float dt) {
@@ -178,7 +189,7 @@ public class Player : MonoBehaviour {
         grabPrompt.SetActive(false);
         killPrompt.SetActive(false);
         dropPrompt.SetActive(true);
-        dropPrompt.transform.position = pos;
+        dropPrompt.transform.position = currentCorpseTarget.transform.position;
 
         if (Input.GetKey(KeyCode.K)) {
             SetState(PlayerState.DroppingCorpse);
@@ -308,6 +319,7 @@ public class Player : MonoBehaviour {
 
     public void OnLevelLoaded(Vector3 spawnPos) {
         gameObject.SetActive(true);
+        powerBoxes = GameObject.FindObjectsOfType<PowerBox>();
         transform.position = spawnPos;
         SetState(PlayerState.Idle);
         currentCorpseTarget = null;
@@ -321,6 +333,21 @@ public class Player : MonoBehaviour {
         dropPrompt.SetActive(false);
         killPrompt.SetActive(false);
         dropPrompt.SetActive(false);
+        togglePrompt.SetActive(false);
         gameObject.SetActive(false);
+    }
+
+    void CheckPowerBoxes() {
+        togglePrompt.SetActive(false);
+        foreach (var powerBox in powerBoxes) {
+            var toBox = powerBox.transform.position - transform.position;
+            if (powerBox.CanBeToggled() && toBox.sqrMagnitude < 1 && Vector3.Angle(-powerBox.transform.right, toBox.normalized) < 80) {
+                togglePrompt.SetActive(true);
+                togglePrompt.transform.position = powerBox.transform.position;
+                if (Input.GetKey(KeyCode.K)) {
+                    powerBox.Toggle();
+                }
+            }
+        }
     }
 }

@@ -153,7 +153,7 @@ Transform:
   m_Children:
   - {fileID: 426948317}
   - {fileID: 431302276}
-  m_Father: {fileID: 1297229481}
+  m_Father: {fileID: 774972808}
   m_RootOrder: -1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &303243431
@@ -687,6 +687,7 @@ Transform:
   m_Children:
   - {fileID: 2124516298}
   - {fileID: 1696703732}
+  - {fileID: 228420374}
   m_Father: {fileID: 1297229481}
   m_RootOrder: -1
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -1546,7 +1547,6 @@ Transform:
   - {fileID: 1823232112}
   - {fileID: 1890932621}
   - {fileID: 774972808}
-  - {fileID: 228420374}
   - {fileID: 825306112}
   m_Father: {fileID: 0}
   m_RootOrder: 0
@@ -1978,6 +1978,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 90
       objectReference: {fileID: 0}
+    - target: {fileID: 2999702590126713122, guid: 80e29acf50afeeb42b3f6847ad8e986d, type: 3}
+      propertyPath: consumer
+      value: 
+      objectReference: {fileID: 2124516299}
+    - target: {fileID: 2999702590126713122, guid: 80e29acf50afeeb42b3f6847ad8e986d, type: 3}
+      propertyPath: powerLine
+      value: 
+      objectReference: {fileID: 228420373}
     - target: {fileID: 3846655450699207421, guid: 80e29acf50afeeb42b3f6847ad8e986d, type: 3}
       propertyPath: m_Name
       value: PowerBox
@@ -2301,6 +2309,10 @@ PrefabInstance:
       propertyPath: interval
       value: 10
       objectReference: {fileID: 0}
+    - target: {fileID: 398015495561515241, guid: bb3e95384dff11642992c5eb3bb578f6, type: 3}
+      propertyPath: visionLength
+      value: 9
+      objectReference: {fileID: 0}
     - target: {fileID: 2490985552171802044, guid: bb3e95384dff11642992c5eb3bb578f6, type: 3}
       propertyPath: m_Name
       value: SecurityCam
@@ -2357,3 +2369,14 @@ Transform:
   m_CorrespondingSourceObject: {fileID: 2490985552171802047, guid: bb3e95384dff11642992c5eb3bb578f6, type: 3}
   m_PrefabInstance: {fileID: 2124516297}
   m_PrefabAsset: {fileID: 0}
+--- !u!114 &2124516299 stripped
+MonoBehaviour:
+  m_CorrespondingSourceObject: {fileID: 398015495561515241, guid: bb3e95384dff11642992c5eb3bb578f6, type: 3}
+  m_PrefabInstance: {fileID: 2124516297}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8e5a65dba0bd4d84fbafe936c0a27434, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 

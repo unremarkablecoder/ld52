@@ -7,6 +7,8 @@ using UnityEngine.SceneManagement;
 public class GameLoop : MonoBehaviour {
     [SerializeField] private Player player;
     [SerializeField] private Enemies enemies;
+    [SerializeField] private Blood blood;
+    [SerializeField] private Corpses corpses;
 
     private bool levelWasLoaded = false;
     private int loadedLevelIndex = 0;
@@ -39,5 +41,7 @@ public class GameLoop : MonoBehaviour {
     public void Die() {
         SceneManager.UnloadSceneAsync(loadedLevelIndex);
         loadedLevelIndex = 0;
+        blood.Clear();
+        corpses.Clear();
     }
 }

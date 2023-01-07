@@ -10,13 +10,16 @@ public enum EnemyState {
     StandingAtPoint,
     WalkingToPoint,
     LookingAround,
+    LookingForPlayer,
     Chasing,
     Attacking,
+    Investigating,
     BeingHarvested,
 }
 
 public class Guard : MonoBehaviour {
     [SerializeField] private GameObject alertIcon;
+    [SerializeField] private GameObject susIcon;
     [SerializeField] private VisionCone visionCone;
     [SerializeField] private VisionCone alertVisionCone;
     [SerializeField] private PatrolPoint[] patrolPoints;
@@ -27,7 +30,8 @@ public class Guard : MonoBehaviour {
     [SerializeField] private float radius = 0.5f;
     [SerializeField] private float alertSpeed = 10.0f;
     [SerializeField] private float alertSpeedDecrease = 5.0f;
-    [SerializeField] private float lookAroundChangeSpeed = 0.1f;
+    [SerializeField] private float lookAroundChangeSpeedMin = 0.4f;
+    [SerializeField] private float lookAroundChangeSpeedMax = 0.8f;
     [SerializeField] private float lookAroundInterval = 0.3f;
     private float rotateSpeed = 720;
     private float targetRot;
@@ -40,12 +44,19 @@ public class Guard : MonoBehaviour {
     private float pointTimer;
     private float alertVisionLength = 0;
     private Player player;
+    private Corpses corpses;
     private Vector3 pointToInvestigate;
     private float lookAroundTimer = 0;
     private float lookAroundVel = 0;
     private float stateTimer = 0;
 
+    private List<GuardCorpse> seenCorpses = new List<GuardCorpse>();
+
     public void SetState(EnemyState newState) {
+        if (newState == state) {
+            return;
+        }
+
         state = newState;
         pointTimer = 0;
         lookAroundTimer = 0;
@@ -68,8 +79,12 @@ public class Guard : MonoBehaviour {
 
     private void FixedUpdate() {
         float dt = Time.fixedDeltaTime;
-        
 
+        if (!corpses) {
+            return;
+        }
+
+        susIcon.transform.rotation = Quaternion.identity;
         switch (state) {
             case EnemyState.StandingAtPoint: {
                 alertIcon.SetActive(false);
@@ -101,7 +116,7 @@ public class Guard : MonoBehaviour {
             case EnemyState.Chasing: {
                 alertIcon.SetActive(true);
                 alertIcon.transform.rotation = Quaternion.identity;
-                pointTimer += dt;
+                susIcon.SetActive(false);
                 var targetPos = pointToInvestigate;
                 var pos = transform.position;
                 var toTarget = targetPos - pos;
@@ -114,19 +129,49 @@ public class Guard : MonoBehaviour {
                     SetState(EnemyState.Attacking);
                     break;
                 }
+
                 if (toTarget.sqrMagnitude < 0.01f) {
-                    SetState(EnemyState.LookingAround);
+                    SetState(EnemyState.LookingForPlayer);
+                }
+            }
+                break;
+            case EnemyState.Investigating: {
+                susIcon.SetActive(true);
+                var targetPos = pointToInvestigate;
+                var pos = transform.position;
+                var toTarget = targetPos - pos;
+                var dir = toTarget.normalized;
+                targetRot = Mathf.Atan2(dir.y, dir.x);
+                //just look at first
+                if (stateTimer > 1.0f) {
+                    pos += dir * (walkSpeed * dt);
+                    transform.position = pos;
+                    if (toTarget.sqrMagnitude < 0.01f) {
+                        SetState(EnemyState.LookingAround);
+                    }
                 }
             }
                 break;
             case EnemyState.LookingAround: {
-                alertIcon.SetActive(true);
-                alertIcon.transform.rotation = Quaternion.identity;
-                pointTimer += dt;
+                susIcon.SetActive(true);
                 lookAroundTimer -= dt;
                 if (lookAroundTimer < 0) {
                     lookAroundTimer = lookAroundInterval;
-                    lookAroundVel = Random.Range(-lookAroundChangeSpeed, lookAroundChangeSpeed);
+                    lookAroundVel = Random.Range(lookAroundChangeSpeedMin, lookAroundChangeSpeedMax) * (Random.Range(0, 2) == 0 ? -1 : 1);
+                }
+
+                targetRot += lookAroundVel * dt;
+                targetRot = Mathf.Repeat(targetRot, Mathf.PI * 2);
+            }
+                break;
+            case EnemyState.LookingForPlayer: {
+                alertIcon.SetActive(true);
+                alertIcon.transform.rotation = Quaternion.identity;
+                susIcon.SetActive(false);
+                lookAroundTimer -= dt;
+                if (lookAroundTimer < 0) {
+                    lookAroundTimer = lookAroundInterval;
+                    lookAroundVel = Random.Range(lookAroundChangeSpeedMin, lookAroundChangeSpeedMax) * (Random.Range(0, 2) == 0 ? -1 : 1);
                 }
 
                 targetRot += lookAroundVel * dt;
@@ -134,11 +179,12 @@ public class Guard : MonoBehaviour {
             }
                 break;
             case EnemyState.Attacking: {
+                alertIcon.SetActive(true);
+                susIcon.SetActive(false);
                 if (stateTimer > 0.5f) {
                     //game over
                     player.Die();
                 }
-                
             }
                 break;
         }
@@ -167,6 +213,8 @@ public class Guard : MonoBehaviour {
         Vector3[] alertEndPoints = new Vector3[num];
         bool playerInVision = false;
         bool playerInAlertVision = false;
+        bool corpseInVision = false;
+        bool corpseInAlertVision = false;
         for (int i = 0; i < num; ++i) {
             float rad = dirRad - ((num / 2) * angleStepRad) + i * angleStepRad;
             var lineDir = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad));
@@ -178,10 +226,10 @@ public class Guard : MonoBehaviour {
                     if (hitInfo.distance < alertVisionLength) {
                         playerInAlertVision = true;
                     }
+
                     //cast again without player
                     hitInfo = Physics2D.Linecast(pos, pos + lineDir * visionLength, ~(1 << LayerMask.NameToLayer("Player")));
                 }
-
             }
 
             if (hitInfo.collider) {
@@ -195,6 +243,29 @@ public class Guard : MonoBehaviour {
             }
         }
 
+
+        if (state != EnemyState.Investigating) {
+            var corpseList = corpses.GetCorpses();
+            foreach (var corpse in corpseList) {
+                if (seenCorpses.Contains(corpse)) {
+                    continue;
+                }
+
+                var toCorpse = corpse.transform.position - pos;
+                var toCorpseDir = toCorpse.normalized;
+                float angleDiff = Vector3.Angle(toCorpseDir, dir);
+                if (angleDiff < visionAngle / 2) {
+                    var corpseHitInfo = Physics2D.Linecast(pos, corpse.transform.position, ~(1 << LayerMask.NameToLayer("Player")));
+                    if (!corpseHitInfo.collider) {
+                        //see corpse
+                        pointToInvestigate = corpse.transform.position;
+                        SetState(EnemyState.Investigating);
+                        seenCorpses.Add(corpse);
+                    }
+                }
+            }
+        }
+
         visionCone.SetEndPoints(endPoints);
         alertVisionCone.SetEndPoints(alertEndPoints);
 
@@ -204,9 +275,15 @@ public class Guard : MonoBehaviour {
             if (playerInAlertVision) {
                 SetState(EnemyState.Chasing);
             }
+            else {
+                susIcon.SetActive(true);
+            }
         }
         else {
             alertVisionLength = Mathf.Max(0, alertVisionLength - alertSpeedDecrease * dt);
+            if (state != EnemyState.Investigating && state != EnemyState.LookingAround) {
+                susIcon.SetActive(false);
+            }
         }
     }
 
@@ -214,8 +291,9 @@ public class Guard : MonoBehaviour {
         Handles.Label(transform.position, currentPoint + ", " + state.ToString() + ", " + pointTimer.ToString("F1"));
     }
 
-    public void SetPlayer(Player player) {
+    public void Init(Player player, Corpses corpses) {
         this.player = player;
+        this.corpses = corpses;
     }
 
     public bool CanKill() {

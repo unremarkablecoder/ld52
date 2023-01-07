@@ -2,7 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 
-public class SecurityCam : MonoBehaviour {
+public class SecurityCam : PowerConsumer {
     [SerializeField] private VisionCone visionCone;
     [SerializeField] private float rotationDegrees = 90;
     [SerializeField] private float interval = 5;
@@ -10,6 +10,9 @@ public class SecurityCam : MonoBehaviour {
     [SerializeField] private float visionLength = 7;
 
     private float startRot;
+    private float timer;
+
+    private bool powerOn = true;
     
     // Start is called before the first frame update
     void Start() {
@@ -18,7 +21,11 @@ public class SecurityCam : MonoBehaviour {
 
     // Update is called once per frame
     void FixedUpdate() {
-        float t = (Time.fixedTime % interval) / interval;
+        if (!powerOn) {
+            return;
+        }
+        timer += Time.fixedDeltaTime;
+        float t = (timer % interval) / interval;
 
         float rot = startRot + Mathf.Sin(t * Mathf.PI * 2) * (rotationDegrees*0.5f * Mathf.Deg2Rad);
         transform.right = new Vector3(Mathf.Cos(rot), Mathf.Sin(rot));
@@ -51,5 +58,11 @@ public class SecurityCam : MonoBehaviour {
         }
         visionCone.SetEndPoints(endPoints);
 
+    }
+
+    public override void OnPowerToggle(bool on) {
+        base.OnPowerToggle(on);
+        powerOn = on;
+        visionCone.gameObject.SetActive(on);
     }
 }

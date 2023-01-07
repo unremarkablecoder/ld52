@@ -13,5 +13,12 @@ public class Blood : MonoBehaviour {
         float scale = Random.Range(minSize, maxSize);
         obj.transform.localScale = Vector3.one * scale;
         blood.Add(obj);
-    } 
+    }
+
+    public void Clear() {
+        foreach (var o in blood) {
+            Destroy(o);
+        }
+        blood.Clear();
+    }
 }

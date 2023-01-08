@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
@@ -7,10 +8,25 @@ public class Enemies : MonoBehaviour {
     [SerializeField] private Player player;
     [SerializeField] private Corpses corpses;
     private List<Guard> guards;
-    
-    // Start is called before the first frame update
-    void Start() {
-        
+
+    private AudioManager audioManager;
+
+    private void Awake() {
+        audioManager = FindObjectOfType<AudioManager>();
+    }
+
+    void Update() {
+        if (guards == null) {
+            return;
+        }
+        foreach (var guard in guards) {
+            if (guard.IsAlert()) {
+                audioManager.SetAlert(true);
+                return;
+
+            }
+        }
+        audioManager.SetAlert(false);
     }
 
     public void OnLevelLoaded() {

@@ -132,9 +132,11 @@ public class Player : MonoBehaviour {
         if (vel.sqrMagnitude > float.Epsilon) {
             SetState(PlayerState.Walking);
             targetRot = Mathf.Atan2(vel.normalized.y, vel.normalized.x);
+            animator.SetTrigger("walking");
         }
         else {
             SetState(PlayerState.Idle);
+            animator.SetTrigger("idle");
         }
 
         pos += vel * dt;
@@ -181,9 +183,11 @@ public class Player : MonoBehaviour {
         if (vel.sqrMagnitude > float.Epsilon) {
             SetState(PlayerState.WalkingWithCorpse);
             targetRot = Mathf.Atan2(vel.normalized.y, vel.normalized.x);
+            animator.SetTrigger("walkingWithCorpse");
         }
         else {
             SetState(PlayerState.IdleWithCorpse);
+            animator.SetTrigger("idleWithCorpse");
         }
 
 
@@ -308,6 +312,7 @@ public class Player : MonoBehaviour {
                 break;
             case PlayerState.Killing:
                 audioManager.Play(audioManager.kill);
+                audioManager.Play(audioManager.die);
                 animator.SetTrigger("kill");
                 break;
             case PlayerState.IdleWithCorpse:
@@ -317,7 +322,11 @@ public class Player : MonoBehaviour {
                 animator.SetTrigger("walkingWithCorpse");
                 break;
             case PlayerState.PickingUpCorpse:
+                audioManager.Play(audioManager.grab);
+                animator.SetTrigger("pickingUpCorpse");
+                break;
             case PlayerState.DroppingCorpse:
+                audioManager.Play(audioManager.drop);
                 animator.SetTrigger("pickingUpCorpse");
                 break;
         }

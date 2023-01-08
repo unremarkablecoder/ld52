@@ -30,7 +30,7 @@ Transform:
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_RootOrder: 14
+  m_RootOrder: 0
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!114 &1016096711917210780
 MonoBehaviour:
@@ -45,3 +45,15 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   kill: {fileID: 2462127303277430704, guid: f79fc781c6523ca4e944a007c264583a, type: 3}
+  grab: {fileID: 2462127303277430704, guid: 322b24114f1035b43ad3a2df180e8892, type: 3}
+  drop: {fileID: 2462127303277430704, guid: a02ae6b1819a6a64daf2589a5022a749, type: 3}
+  huh: {fileID: 2462127303277430704, guid: 41985df3389410a429f55b0297343546, type: 3}
+  disappeared: {fileID: 2462127303277430704, guid: 48548ac04c944784186b8c66a302f298, type: 3}
+  ohWell: {fileID: 2462127303277430704, guid: efcdaa875afd77f4299e6330de807e75, type: 3}
+  body: {fileID: 2462127303277430704, guid: 8bb87672e816d744faafba322bfa7aaa, type: 3}
+  die: {fileID: 2462127303277430704, guid: 1ce05832df5baa743ba4187fdee155c8, type: 3}
+  powerToggle: {fileID: 2462127303277430704, guid: 21563e37be6b13d4f9b2ddf51b7f523e, type: 3}
+  door: {fileID: 2462127303277430704, guid: b715f665027024a439a636835b432b53, type: 3}
+  overThere: {fileID: 2462127303277430704, guid: 15b39ebc8d0cab843b9f8e840ec46f87, type: 3}
+  musicNormal: {fileID: 2462127303277430704, guid: 98f9ebbf6fdb805449f1bb675aedbb63, type: 3}
+  musicAlert: {fileID: 2462127303277430704, guid: f800a9dcb831bb546b95f309371a252f, type: 3}

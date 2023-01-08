@@ -53,6 +53,7 @@ public class Guard : MonoBehaviour {
     private float stateTimer = 0;
     private bool playerInVision;
     private bool playerInAlertVision;
+    private bool playedHuhSound = false;
 
     private List<GuardCorpse> seenCorpses = new List<GuardCorpse>();
     private List<Vector3> backtrackPoints = new List<Vector3>();
@@ -67,6 +68,15 @@ public class Guard : MonoBehaviour {
         state = newState;
         lookAroundTimer = 0;
         stateTimer = 0;
+
+        switch (newState) {
+            case EnemyState.Investigating:
+                audioManager.Play(audioManager.huh);
+                break;
+            case EnemyState.Chasing:
+                audioManager.Play(audioManager.overThere);
+                break;
+        }
     }
 
     void Awake() {
@@ -208,7 +218,7 @@ public class Guard : MonoBehaviour {
         transform.position = pos;
         UpdateBacktracking();
         var toPlayer = player.transform.position - pos;
-        if (toPlayer.magnitude < 1.5f) {
+        if (toPlayer.magnitude < 1.1f) {
             SetState(EnemyState.Attacking);
             return;
         }
@@ -240,6 +250,7 @@ public class Guard : MonoBehaviour {
             pos += toTargetDir * (walkSpeed * dt);
             transform.position = pos;
             if (toTarget.sqrMagnitude < 0.01f) {
+                audioManager.Play(audioManager.body);
                 SetState(EnemyState.LookingAround);
                 return;
             }
@@ -278,6 +289,7 @@ public class Guard : MonoBehaviour {
         }
         
         if (stateTimer >= lookingAroundAbortTime) {
+            audioManager.Play(audioManager.ohWell);
             SetState(EnemyState.Backtrack);
             return;
         }
@@ -309,6 +321,7 @@ public class Guard : MonoBehaviour {
         }
 
         if (stateTimer >= lookingForPlayerAbortTime) {
+            audioManager.Play(audioManager.disappeared);
             SetState(EnemyState.Backtrack);
             return;
         }
@@ -317,7 +330,7 @@ public class Guard : MonoBehaviour {
     void DoAttacking(float dt) {
         alertIcon.SetActive(true);
         susIcon.SetActive(false);
-        if (stateTimer > 0.5f) {
+        if (stateTimer > 0.1f) {
             //game over
             player.Die();
         }
@@ -476,9 +489,14 @@ public class Guard : MonoBehaviour {
             }
             else {
                 susIcon.SetActive(true);
+                if (!playedHuhSound) {
+                    playedHuhSound = true;
+                    audioManager.Play(audioManager.huh);
+                }
             }
         }
         else {
+            playedHuhSound = false;
             alertVisionLength = Mathf.Max(0, alertVisionLength - alertSpeedDecrease * dt);
             if (state != EnemyState.Investigating && state != EnemyState.LookingAround) {
                 susIcon.SetActive(false);
@@ -541,5 +559,9 @@ public class Guard : MonoBehaviour {
 
         //should have been able to reach it last frame, so add that position
         backtrackPoints.Add(prevPos);
+    }
+
+    public bool IsAlert() {
+        return state == EnemyState.Chasing || state == EnemyState.Attacking;
     }
 }

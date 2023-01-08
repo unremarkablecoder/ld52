@@ -11,8 +11,15 @@ public class PowerBox : MonoBehaviour {
     [SerializeField] private Color offColor;
 
     private float lastToggleTimer = 0.5f;
+    private AudioManager audioManager;
+
+
+    private void Awake() {
+        audioManager = FindObjectOfType<AudioManager>();
+    }
 
     public void Start() {
+        
         consumer.OnPowerToggle(powerOn);
         UpdatePowerLineGfx();
     }
@@ -26,6 +33,8 @@ public class PowerBox : MonoBehaviour {
             return;
         }
 
+        audioManager.Play(audioManager.powerToggle);
+        audioManager.Play(audioManager.door);
         lastToggleTimer = 0;
         powerOn = !powerOn;
         consumer.OnPowerToggle(powerOn);

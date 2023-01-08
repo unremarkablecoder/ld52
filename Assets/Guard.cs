@@ -167,14 +167,22 @@ public class Guard : MonoBehaviour {
         alertIcon.SetActive(true);
         alertIcon.transform.rotation = Quaternion.identity;
         susIcon.SetActive(false);
+        ActOnPlayerVision(dt);
         var targetPos = pointToInvestigate;
         var pos = transform.position;
         var toTarget = targetPos - pos;
-        var dir = toTarget.normalized;
-        targetRot = Mathf.Atan2(dir.y, dir.x);
-        pos += dir * (runSpeed * dt);
+        var toTargetDir = toTarget.normalized;
+
+        var hitInfo = Physics2D.CircleCast(pos, radius, toTargetDir, toTarget.magnitude, 1 << LayerMask.NameToLayer("Walls"));
+        if (hitInfo.collider) {
+            targetPos = hitInfo.centroid + hitInfo.normal * 0.5f;
+            toTarget = targetPos - pos;
+            toTargetDir = toTarget.normalized;
+        }
+            
+        targetRot = Mathf.Atan2(toTargetDir.y, toTargetDir.x);
+        pos += toTargetDir * (runSpeed * dt);
         transform.position = pos;
-        ActOnPlayerVision(dt);
         var toPlayer = player.transform.position - pos;
         if (toPlayer.magnitude < 1.5f) {
             SetState(EnemyState.Attacking);

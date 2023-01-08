@@ -441,7 +441,7 @@ public class Guard : MonoBehaviour {
 
         var dir = transform.right;
 
-        const int num = 15;
+        const int num = VisionCone.numEndPoints;
         float angleStepRad = visionAngle / num * Mathf.Deg2Rad;
         float dirRad = Mathf.Atan2(dir.y, dir.x);
         Vector3[] endPoints = new Vector3[num];

@@ -74,6 +74,7 @@ public class Guard : MonoBehaviour {
                 audioManager.Play(audioManager.huh);
                 break;
             case EnemyState.Chasing:
+                audioManager.Play(audioManager.alertSound);
                 audioManager.Play(audioManager.overThere);
                 break;
         }
@@ -506,6 +507,7 @@ public class Guard : MonoBehaviour {
         return false;
     }
 
+    #if UNITY_EDITOR
     private void OnDrawGizmos() {
         Handles.Label(transform.position, currentPoint + ", " + state.ToString() + ", " + stateTimer.ToString("F1"));
     }
@@ -515,6 +517,7 @@ public class Guard : MonoBehaviour {
             Handles.PositionHandle(backtrackPoint, Quaternion.identity);
         }
     }
+    #endif
 
     public void Init(Player player, Corpses corpses) {
         this.player = player;

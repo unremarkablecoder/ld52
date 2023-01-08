@@ -55,5 +55,6 @@ MonoBehaviour:
   powerToggle: {fileID: 2462127303277430704, guid: 21563e37be6b13d4f9b2ddf51b7f523e, type: 3}
   door: {fileID: 2462127303277430704, guid: b715f665027024a439a636835b432b53, type: 3}
   overThere: {fileID: 2462127303277430704, guid: 15b39ebc8d0cab843b9f8e840ec46f87, type: 3}
+  alertSound: {fileID: 2462127303277430704, guid: 1438e659459819145b36157240b678a9, type: 3}
   musicNormal: {fileID: 2462127303277430704, guid: 98f9ebbf6fdb805449f1bb675aedbb63, type: 3}
   musicAlert: {fileID: 2462127303277430704, guid: f800a9dcb831bb546b95f309371a252f, type: 3}

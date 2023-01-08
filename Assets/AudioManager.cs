@@ -15,6 +15,7 @@ public class AudioManager : MonoBehaviour {
     public AudioSource powerToggle;
     public AudioSource door;
     public AudioSource overThere;
+    public AudioSource alertSound;
 
     public AudioSource musicNormal;
     public AudioSource musicAlert;

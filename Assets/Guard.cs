@@ -49,6 +49,8 @@ public class Guard : MonoBehaviour {
     private float lookAroundTimer = 0;
     private float lookAroundVel = 0;
     private float stateTimer = 0;
+    private bool playerInVision;
+    private bool playerInAlertVision;
 
     private List<GuardCorpse> seenCorpses = new List<GuardCorpse>();
 
@@ -86,115 +88,205 @@ public class Guard : MonoBehaviour {
 
         susIcon.transform.rotation = Quaternion.identity;
         alertIcon.transform.rotation = Quaternion.identity;
+        UpdateVision();
+
         switch (state) {
-            case EnemyState.StandingAtPoint: {
-                alertIcon.SetActive(false);
-                pointTimer += dt;
-                var lookDir = patrolPoints[currentPoint].lookDir;
-                targetRot = Mathf.Atan2(lookDir.y, lookDir.x);
-                if (pointTimer >= patrolPoints[currentPoint].timeToStay) {
-                    currentPoint = (currentPoint + 1) % patrolPoints.Length;
-                    SetState(EnemyState.WalkingToPoint);
-                }
-            }
+            case EnemyState.StandingAtPoint:
+                DoStandingAtPoint(dt);
                 break;
-            case EnemyState.WalkingToPoint: {
-                alertIcon.SetActive(false);
-                pointTimer += dt;
-                int prevPoint = GetPrevPoint();
-                var targetPos = patrolPoints[currentPoint].pos;
-                var pos = transform.position;
-                var toTarget = targetPos - pos;
-                var dir = toTarget.normalized;
-                targetRot = Mathf.Atan2(dir.y, dir.x);
-                pos += dir * (walkSpeed * dt);
-                transform.position = pos;
-                if (toTarget.sqrMagnitude < 0.01f) {
-                    SetState(EnemyState.StandingAtPoint);
-                }
-            }
+            case EnemyState.WalkingToPoint:
+                DoWalkingToPoint(dt);
                 break;
-            case EnemyState.Chasing: {
-                alertIcon.SetActive(true);
-                alertIcon.transform.rotation = Quaternion.identity;
-                susIcon.SetActive(false);
-                var targetPos = pointToInvestigate;
-                var pos = transform.position;
-                var toTarget = targetPos - pos;
-                var dir = toTarget.normalized;
-                targetRot = Mathf.Atan2(dir.y, dir.x);
-                pos += dir * (runSpeed * dt);
-                transform.position = pos;
-                var toPlayer = player.transform.position - pos;
-                if (toPlayer.magnitude < 1.5f) {
-                    SetState(EnemyState.Attacking);
-                    break;
-                }
-
-                if (toTarget.sqrMagnitude < 0.01f) {
-                    SetState(EnemyState.LookingForPlayer);
-                }
-            }
+            case EnemyState.Chasing:
+                DoChasing(dt);
                 break;
-            case EnemyState.Investigating: {
-                susIcon.SetActive(true);
-                var targetPos = pointToInvestigate;
-                var pos = transform.position;
-                var toTarget = targetPos - pos;
-                var dir = toTarget.normalized;
-                targetRot = Mathf.Atan2(dir.y, dir.x);
-                //just look at first
-                if (stateTimer > 1.0f) {
-                    pos += dir * (walkSpeed * dt);
-                    transform.position = pos;
-                    if (toTarget.sqrMagnitude < 0.01f) {
-                        SetState(EnemyState.LookingAround);
-                    }
-                }
-            }
+            case EnemyState.Investigating:
+                DoInvestigating(dt);
                 break;
-            case EnemyState.LookingAround: {
-                susIcon.SetActive(true);
-                lookAroundTimer -= dt;
-                if (lookAroundTimer < 0) {
-                    lookAroundTimer = lookAroundInterval;
-                    lookAroundVel = Random.Range(lookAroundChangeSpeedMin, lookAroundChangeSpeedMax) * (Random.Range(0, 2) == 0 ? -1 : 1);
-                }
-
-                targetRot += lookAroundVel * dt;
-                targetRot = Mathf.Repeat(targetRot, Mathf.PI * 2);
-            }
+            case EnemyState.LookingAround:
+                DoLookingAround(dt);
                 break;
-            case EnemyState.LookingForPlayer: {
-                alertIcon.SetActive(true);
-                alertIcon.transform.rotation = Quaternion.identity;
-                susIcon.SetActive(false);
-                lookAroundTimer -= dt;
-                if (lookAroundTimer < 0) {
-                    lookAroundTimer = lookAroundInterval;
-                    lookAroundVel = Random.Range(lookAroundChangeSpeedMin, lookAroundChangeSpeedMax) * (Random.Range(0, 2) == 0 ? -1 : 1);
-                }
-
-                targetRot += lookAroundVel * dt;
-                targetRot = Mathf.Repeat(targetRot, Mathf.PI * 2);
-            }
+            case EnemyState.LookingForPlayer:
+                DoLookingForPlayer(dt);
                 break;
-            case EnemyState.Attacking: {
-                alertIcon.SetActive(true);
-                susIcon.SetActive(false);
-                if (stateTimer > 0.5f) {
-                    //game over
-                    player.Die();
-                }
-            }
+            case EnemyState.Attacking: 
+                DoAttacking(dt);
                 break;
-        }
-
-        if (state != EnemyState.BeingHarvested && state != EnemyState.Attacking) {
-            UpdateVision();
         }
 
         stateTimer += dt;
+    }
+
+    void DoStandingAtPoint(float dt) {
+        alertIcon.SetActive(false);
+        pointTimer += dt;
+        var lookDir = patrolPoints[currentPoint].lookDir;
+        targetRot = Mathf.Atan2(lookDir.y, lookDir.x);
+        if (pointTimer >= patrolPoints[currentPoint].timeToStay) {
+            currentPoint = (currentPoint + 1) % patrolPoints.Length;
+            SetState(EnemyState.WalkingToPoint);
+            return;
+        }
+
+        if (ActOnPlayerVision(dt)) {
+            SetState(EnemyState.Chasing);
+            return;
+        }
+
+        if (CheckForCorpses(out var corpse)) {
+            pointToInvestigate = corpse.transform.position;
+            seenCorpses.Add(corpse);
+            SetState(EnemyState.Investigating);
+            return;
+        }
+    }
+
+    void DoWalkingToPoint(float dt) {
+        alertIcon.SetActive(false);
+        pointTimer += dt;
+        var targetPos = patrolPoints[currentPoint].pos;
+        var pos = transform.position;
+        var toTarget = targetPos - pos;
+        var dir = toTarget.normalized;
+        targetRot = Mathf.Atan2(dir.y, dir.x);
+        pos += dir * (walkSpeed * dt);
+        transform.position = pos;
+
+        if (ActOnPlayerVision(dt)) {
+            SetState(EnemyState.Chasing);
+            return;
+        }
+
+        if (toTarget.sqrMagnitude < 0.01f) {
+            SetState(EnemyState.StandingAtPoint);
+            return;
+        }
+    }
+
+    void DoChasing(float dt) {
+        alertIcon.SetActive(true);
+        alertIcon.transform.rotation = Quaternion.identity;
+        susIcon.SetActive(false);
+        var targetPos = pointToInvestigate;
+        var pos = transform.position;
+        var toTarget = targetPos - pos;
+        var dir = toTarget.normalized;
+        targetRot = Mathf.Atan2(dir.y, dir.x);
+        pos += dir * (runSpeed * dt);
+        transform.position = pos;
+        ActOnPlayerVision(dt);
+        var toPlayer = player.transform.position - pos;
+        if (toPlayer.magnitude < 1.5f) {
+            SetState(EnemyState.Attacking);
+            return;
+        }
+
+        if (toTarget.sqrMagnitude < 0.01f) {
+            SetState(EnemyState.LookingForPlayer);
+            return;
+        }
+    }
+
+    void DoInvestigating(float dt) {
+        susIcon.SetActive(true);
+        var targetPos = pointToInvestigate;
+        var pos = transform.position;
+        var toTarget = targetPos - pos;
+        var dir = toTarget.normalized;
+        targetRot = Mathf.Atan2(dir.y, dir.x);
+        //just look at first
+        if (stateTimer > 1.0f) {
+            pos += dir * (walkSpeed * dt);
+            transform.position = pos;
+            if (toTarget.sqrMagnitude < 0.01f) {
+                SetState(EnemyState.LookingAround);
+                return;
+            }
+        }
+
+        if (ActOnPlayerVision(dt)) {
+            SetState(EnemyState.Chasing);
+            return;
+        }
+    }
+
+    void DoLookingAround(float dt) {
+        susIcon.SetActive(true);
+        lookAroundTimer -= dt;
+        if (lookAroundTimer < 0) {
+            lookAroundTimer = lookAroundInterval;
+            lookAroundVel = Random.Range(lookAroundChangeSpeedMin, lookAroundChangeSpeedMax) * (Random.Range(0, 2) == 0 ? -1 : 1);
+        }
+
+        targetRot += lookAroundVel * dt;
+        targetRot = Mathf.Repeat(targetRot, Mathf.PI * 2);
+        
+        if (ActOnPlayerVision(dt)) {
+            SetState(EnemyState.Chasing);
+            return;
+        }
+    }
+
+    void DoLookingForPlayer(float dt) {
+        alertIcon.SetActive(true);
+        alertIcon.transform.rotation = Quaternion.identity;
+        susIcon.SetActive(false);
+        lookAroundTimer -= dt;
+        if (lookAroundTimer < 0) {
+            lookAroundTimer = lookAroundInterval;
+            lookAroundVel = Random.Range(lookAroundChangeSpeedMin, lookAroundChangeSpeedMax) * (Random.Range(0, 2) == 0 ? -1 : 1);
+        }
+
+        targetRot += lookAroundVel * dt;
+        targetRot = Mathf.Repeat(targetRot, Mathf.PI * 2);
+        
+        if (ActOnPlayerVision(dt)) {
+            SetState(EnemyState.Chasing);
+            return;
+        }
+    }
+
+    void DoAttacking(float dt) {
+        alertIcon.SetActive(true);
+        susIcon.SetActive(false);
+        if (stateTimer > 0.5f) {
+            //game over
+            player.Die();
+        }
+    }
+
+    bool CheckForCorpses(out GuardCorpse corpseFound) {
+        var pos = transform.position;
+        var dir = transform.right;
+        var corpseList = corpses.GetCorpses();
+
+        foreach (var corpse in corpseList) {
+            if (seenCorpses.Contains(corpse)) {
+                continue;
+            }
+
+            var toCorpse = corpse.transform.position - pos;
+            if (toCorpse.magnitude > visionLength) {
+                continue;
+            }
+
+            var toCorpseDir = toCorpse.normalized;
+            float angleDiff = Vector3.Angle(toCorpseDir, dir);
+            if (angleDiff < visionAngle / 2) {
+                var corpseHitInfo = Physics2D.Linecast(pos, corpse.transform.position, ~(1 << LayerMask.NameToLayer("Player")));
+                if (!corpseHitInfo.collider) {
+                    corpseFound = corpse;
+                    //see corpse
+                    pointToInvestigate = corpse.transform.position;
+                    SetState(EnemyState.Investigating);
+                    seenCorpses.Add(corpse);
+                    return true;
+                }
+            }
+        }
+
+        corpseFound = null;
+        return false;
     }
 
     void UpdateVision() {
@@ -212,10 +304,8 @@ public class Guard : MonoBehaviour {
         float dirRad = Mathf.Atan2(dir.y, dir.x);
         Vector3[] endPoints = new Vector3[num];
         Vector3[] alertEndPoints = new Vector3[num];
-        bool playerInVision = false;
-        bool playerInAlertVision = false;
-        bool corpseInVision = false;
-        bool corpseInAlertVision = false;
+        playerInVision = false;
+        playerInAlertVision = false;
         for (int i = 0; i < num; ++i) {
             float rad = dirRad - ((num / 2) * angleStepRad) + i * angleStepRad;
             var lineDir = new Vector3(Mathf.Cos(rad), Mathf.Sin(rad));
@@ -244,37 +334,17 @@ public class Guard : MonoBehaviour {
             }
         }
 
-
-        if (state != EnemyState.Investigating) {
-            var corpseList = corpses.GetCorpses();
-            foreach (var corpse in corpseList) {
-                if (seenCorpses.Contains(corpse)) {
-                    continue;
-                }
-
-                var toCorpse = corpse.transform.position - pos;
-                var toCorpseDir = toCorpse.normalized;
-                float angleDiff = Vector3.Angle(toCorpseDir, dir);
-                if (angleDiff < visionAngle / 2) {
-                    var corpseHitInfo = Physics2D.Linecast(pos, corpse.transform.position, ~(1 << LayerMask.NameToLayer("Player")));
-                    if (!corpseHitInfo.collider) {
-                        //see corpse
-                        pointToInvestigate = corpse.transform.position;
-                        SetState(EnemyState.Investigating);
-                        seenCorpses.Add(corpse);
-                    }
-                }
-            }
-        }
-
         visionCone.SetEndPoints(endPoints);
         alertVisionCone.SetEndPoints(alertEndPoints);
+    }
 
+    //return true if started chasing
+    bool ActOnPlayerVision(float dt) {
         if (playerInVision) {
             alertVisionLength = Mathf.Min(visionLength, alertVisionLength + alertSpeed * dt);
             pointToInvestigate = player.transform.position;
             if (playerInAlertVision) {
-                SetState(EnemyState.Chasing);
+                return true;
             }
             else {
                 susIcon.SetActive(true);
@@ -286,6 +356,8 @@ public class Guard : MonoBehaviour {
                 susIcon.SetActive(false);
             }
         }
+
+        return false;
     }
 
     private void OnDrawGizmos() {

@@ -25,8 +25,13 @@ public class AudioManager : MonoBehaviour {
     private bool alert = false;
 
     private float alertFade = 0;
+    private bool musicDisabled = false;
+    private bool soundsDisabled = false;
 
     public void Play(AudioSource source) {
+        if (soundsDisabled) {
+            return;
+        }
         var sound = Instantiate(source);
         Destroy(sound.gameObject, sound.clip.length);
     }
@@ -44,6 +49,20 @@ public class AudioManager : MonoBehaviour {
     }
 
     private void Update() {
+        if (Input.GetKeyDown(KeyCode.M)) {
+            musicDisabled = !musicDisabled;
+        }
+
+        if (Input.GetKeyDown(KeyCode.N)) {
+            soundsDisabled = !soundsDisabled;
+        }
+
+        if (musicDisabled) {
+            musicNormalSound.volume = 0;
+            musicAlertSound.volume = 0;
+            return;
+        }
+        
         const float fadeSpeed = 2;
         if (alert) {
             alertFade = Mathf.Min(1.0f, alertFade + fadeSpeed * Time.deltaTime);

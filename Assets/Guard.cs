@@ -128,7 +128,7 @@ public class Guard : MonoBehaviour {
     void DoStandingAtPoint(float dt) {
         backtrackPoints.Clear();
         alertIcon.SetActive(false);
-        var lookDir = patrolPoints[currentPoint].lookDir;
+        var lookDir = patrolPoints[currentPoint].lookDir.normalized;
         targetRot = Mathf.Atan2(lookDir.y, lookDir.x);
         if (stateTimer >= patrolPoints[currentPoint].timeToStay) {
             if (patrolPoints.Length > 1) {

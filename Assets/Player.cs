@@ -24,7 +24,7 @@ public class Player : MonoBehaviour {
     [SerializeField] private GameObject dropPrompt;
     [SerializeField] private GameObject togglePrompt;
     private float radius = 0.5f;
-    private float maxSpeed = 4.5f;
+    private float maxSpeed = 4.0f;
     private float maxSpeedWithCorpse = 2.5f;
     private float killRange = 0.8f;
     private float accel = 20;

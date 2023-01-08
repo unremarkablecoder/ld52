@@ -11,13 +11,17 @@ public class GameLoop : MonoBehaviour {
     [SerializeField] private Corpses corpses;
     [SerializeField] private GameObject winScreen;
     [SerializeField] private GameObject dieScreen;
+    [SerializeField] private GameObject levelSelectScreen;
 
     private bool levelWasLoaded = false;
     private int loadedLevelIndex = 0;
     
     private void Update() {
-        if (Input.GetKeyUp(KeyCode.Return)) {
+        if (Input.GetKeyUp(KeyCode.Alpha1)) {
            LoadLevel(1); 
+        }
+        if (Input.GetKeyUp(KeyCode.Alpha2)) {
+           LoadLevel(2); 
         }
 
         if (levelWasLoaded) {
@@ -38,6 +42,7 @@ public class GameLoop : MonoBehaviour {
     public void LoadLevel(int level) {
         winScreen.SetActive(false);
         dieScreen.SetActive(false);
+        levelSelectScreen.SetActive(false);
         
         loadedLevelIndex = level;
         SceneManager.LoadScene(level, LoadSceneMode.Additive);
@@ -55,10 +60,12 @@ public class GameLoop : MonoBehaviour {
     public void Die() {
         UnloadLevel();
         dieScreen.SetActive(true);
+        levelSelectScreen.SetActive(true);
     }
 
     public void Win() {
         UnloadLevel();
         winScreen.SetActive(true);
+        levelSelectScreen.SetActive(true);
     }
 }

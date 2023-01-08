@@ -477,7 +477,7 @@ MonoBehaviour:
   alertVisionCone: {fileID: 2045968243909437899}
   patrolPoints: []
   walkSpeed: 2
-  runSpeed: 5
+  runSpeed: 3.5
   visionAngle: 100
   visionLength: 12
   radius: 0.5
@@ -487,6 +487,7 @@ MonoBehaviour:
   lookAroundChangeSpeedMax: 1.2
   lookAroundInterval: 3
   lookingForPlayerAbortTime: 5
+  lookingAroundAbortTime: 5
 --- !u!1 &1353576844145977326
 GameObject:
   m_ObjectHideFlags: 0

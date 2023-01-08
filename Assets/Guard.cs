@@ -85,6 +85,7 @@ public class Guard : MonoBehaviour {
         }
 
         susIcon.transform.rotation = Quaternion.identity;
+        alertIcon.transform.rotation = Quaternion.identity;
         switch (state) {
             case EnemyState.StandingAtPoint: {
                 alertIcon.SetActive(false);

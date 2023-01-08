@@ -35,6 +35,7 @@ public class Guard : MonoBehaviour {
     [SerializeField] private float lookAroundChangeSpeedMax = 0.8f;
     [SerializeField] private float lookAroundInterval = 0.3f;
     [SerializeField] private float lookingForPlayerAbortTime = 5.0f;
+    [SerializeField] private float lookingAroundAbortTime = 5.0f;
     private float rotateSpeed = 720;
     private float targetRot;
 
@@ -56,6 +57,7 @@ public class Guard : MonoBehaviour {
     private List<GuardCorpse> seenCorpses = new List<GuardCorpse>();
     private List<Vector3> backtrackPoints = new List<Vector3>();
     private Vector3 prevPos;
+    private AudioManager audioManager;
 
     public void SetState(EnemyState newState) {
         if (newState == state) {
@@ -73,6 +75,7 @@ public class Guard : MonoBehaviour {
         }
 
         prevPos = transform.position;
+        audioManager = FindObjectOfType<AudioManager>();
     }
 
     int GetPrevPoint() {
@@ -271,6 +274,11 @@ public class Guard : MonoBehaviour {
             pointToInvestigate = corpse.transform.position;
             seenCorpses.Add(corpse);
             SetState(EnemyState.Investigating);
+            return;
+        }
+        
+        if (stateTimer >= lookingAroundAbortTime) {
+            SetState(EnemyState.Backtrack);
             return;
         }
     }

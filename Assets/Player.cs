@@ -46,10 +46,12 @@ public class Player : MonoBehaviour {
 
     private PowerBox[] powerBoxes;
     private GameObject goal;
+    private AudioManager audioManager;
 
     void Awake() {
         cam = Camera.main;
         animator = GetComponent<Animator>();
+        audioManager = GameObject.FindObjectOfType<AudioManager>();
     }
 
     // Start is called before the first frame update
@@ -292,6 +294,9 @@ public class Player : MonoBehaviour {
     }
 
     void SetState(PlayerState newState) {
+        if (newState == currentState) {
+            return;
+        }
         currentState = newState;
         stateTimer = 0;
         switch (currentState) {
@@ -302,6 +307,7 @@ public class Player : MonoBehaviour {
                 animator.SetTrigger("walking");
                 break;
             case PlayerState.Killing:
+                audioManager.Play(audioManager.kill);
                 animator.SetTrigger("kill");
                 break;
             case PlayerState.IdleWithCorpse:

@@ -15,6 +15,7 @@ public enum EnemyState {
     Attacking,
     Investigating,
     BeingHarvested,
+    Backtrack,
 }
 
 public class Guard : MonoBehaviour {
@@ -33,6 +34,7 @@ public class Guard : MonoBehaviour {
     [SerializeField] private float lookAroundChangeSpeedMin = 0.4f;
     [SerializeField] private float lookAroundChangeSpeedMax = 0.8f;
     [SerializeField] private float lookAroundInterval = 0.3f;
+    [SerializeField] private float lookingForPlayerAbortTime = 5.0f;
     private float rotateSpeed = 720;
     private float targetRot;
 
@@ -41,7 +43,6 @@ public class Guard : MonoBehaviour {
     private EnemyState state = EnemyState.WalkingToPoint;
 
     private int currentPoint = 0;
-    private float pointTimer;
     private float alertVisionLength = 0;
     private Player player;
     private Corpses corpses;
@@ -53,6 +54,8 @@ public class Guard : MonoBehaviour {
     private bool playerInAlertVision;
 
     private List<GuardCorpse> seenCorpses = new List<GuardCorpse>();
+    private List<Vector3> backtrackPoints = new List<Vector3>();
+    private Vector3 prevPos;
 
     public void SetState(EnemyState newState) {
         if (newState == state) {
@@ -60,7 +63,6 @@ public class Guard : MonoBehaviour {
         }
 
         state = newState;
-        pointTimer = 0;
         lookAroundTimer = 0;
         stateTimer = 0;
     }
@@ -69,6 +71,8 @@ public class Guard : MonoBehaviour {
         if (patrolPoints.Length == 0) {
             patrolPoints = new[] { new PatrolPoint { pos = transform.position, lookDir = transform.right, timeToStay = 10 } };
         }
+
+        prevPos = transform.position;
     }
 
     int GetPrevPoint() {
@@ -109,20 +113,24 @@ public class Guard : MonoBehaviour {
             case EnemyState.LookingForPlayer:
                 DoLookingForPlayer(dt);
                 break;
-            case EnemyState.Attacking: 
+            case EnemyState.Attacking:
                 DoAttacking(dt);
+                break;
+            case EnemyState.Backtrack:
+                DoBacktrack(dt);
                 break;
         }
 
         stateTimer += dt;
+        prevPos = transform.position;
     }
 
     void DoStandingAtPoint(float dt) {
+        backtrackPoints.Clear();
         alertIcon.SetActive(false);
-        pointTimer += dt;
         var lookDir = patrolPoints[currentPoint].lookDir;
         targetRot = Mathf.Atan2(lookDir.y, lookDir.x);
-        if (pointTimer >= patrolPoints[currentPoint].timeToStay) {
+        if (stateTimer >= patrolPoints[currentPoint].timeToStay) {
             currentPoint = (currentPoint + 1) % patrolPoints.Length;
             SetState(EnemyState.WalkingToPoint);
             return;
@@ -142,18 +150,25 @@ public class Guard : MonoBehaviour {
     }
 
     void DoWalkingToPoint(float dt) {
+        backtrackPoints.Clear();
         alertIcon.SetActive(false);
-        pointTimer += dt;
         var targetPos = patrolPoints[currentPoint].pos;
         var pos = transform.position;
         var toTarget = targetPos - pos;
         var dir = toTarget.normalized;
         targetRot = Mathf.Atan2(dir.y, dir.x);
-        pos += dir * (walkSpeed * dt);
+        pos += dir * Mathf.Min(toTarget.magnitude, walkSpeed * dt);
         transform.position = pos;
 
         if (ActOnPlayerVision(dt)) {
             SetState(EnemyState.Chasing);
+            return;
+        }
+        
+        if (CheckForCorpses(out var corpse)) {
+            pointToInvestigate = corpse.transform.position;
+            seenCorpses.Add(corpse);
+            SetState(EnemyState.Investigating);
             return;
         }
 
@@ -179,10 +194,11 @@ public class Guard : MonoBehaviour {
             toTarget = targetPos - pos;
             toTargetDir = toTarget.normalized;
         }
-            
+
         targetRot = Mathf.Atan2(toTargetDir.y, toTargetDir.x);
         pos += toTargetDir * (runSpeed * dt);
         transform.position = pos;
+        UpdateBacktracking();
         var toPlayer = player.transform.position - pos;
         if (toPlayer.magnitude < 1.5f) {
             SetState(EnemyState.Attacking);
@@ -196,6 +212,7 @@ public class Guard : MonoBehaviour {
     }
 
     void DoInvestigating(float dt) {
+        alertIcon.SetActive(false);
         susIcon.SetActive(true);
         var targetPos = pointToInvestigate;
         var pos = transform.position;
@@ -212,6 +229,8 @@ public class Guard : MonoBehaviour {
             }
         }
 
+        UpdateBacktracking();
+
         if (ActOnPlayerVision(dt)) {
             SetState(EnemyState.Chasing);
             return;
@@ -219,6 +238,7 @@ public class Guard : MonoBehaviour {
     }
 
     void DoLookingAround(float dt) {
+        alertIcon.SetActive(false);
         susIcon.SetActive(true);
         lookAroundTimer -= dt;
         if (lookAroundTimer < 0) {
@@ -228,9 +248,16 @@ public class Guard : MonoBehaviour {
 
         targetRot += lookAroundVel * dt;
         targetRot = Mathf.Repeat(targetRot, Mathf.PI * 2);
-        
+
         if (ActOnPlayerVision(dt)) {
             SetState(EnemyState.Chasing);
+            return;
+        }
+        
+        if (CheckForCorpses(out var corpse)) {
+            pointToInvestigate = corpse.transform.position;
+            seenCorpses.Add(corpse);
+            SetState(EnemyState.Investigating);
             return;
         }
     }
@@ -247,9 +274,21 @@ public class Guard : MonoBehaviour {
 
         targetRot += lookAroundVel * dt;
         targetRot = Mathf.Repeat(targetRot, Mathf.PI * 2);
-        
+
         if (ActOnPlayerVision(dt)) {
             SetState(EnemyState.Chasing);
+            return;
+        }
+        
+        if (CheckForCorpses(out var corpse)) {
+            pointToInvestigate = corpse.transform.position;
+            seenCorpses.Add(corpse);
+            SetState(EnemyState.Investigating);
+            return;
+        }
+
+        if (stateTimer >= lookingForPlayerAbortTime) {
+            SetState(EnemyState.Backtrack);
             return;
         }
     }
@@ -260,6 +299,66 @@ public class Guard : MonoBehaviour {
         if (stateTimer > 0.5f) {
             //game over
             player.Die();
+        }
+    }
+
+    void DoBacktrack(float dt) {
+        if (ActOnPlayerVision(dt)) {
+            SetState(EnemyState.Chasing);
+            return;
+        }
+        alertIcon.SetActive(false);
+        susIcon.SetActive(false);
+        
+        var pos = transform.position;
+        Vector3 targetPos = pos;
+        //can I reach any patrol points?
+        int patrolPointIndexFound = 0;
+        bool canReachPatrolPoints = false;
+        for (int i = 0; i < patrolPoints.Length; ++i) {
+            var patrolPoint = patrolPoints[i];
+            var toPoint = patrolPoint.pos - pos;
+            var hitInfo = Physics2D.CircleCast(pos, radius-0.01f, toPoint.normalized, toPoint.magnitude, 1 << LayerMask.NameToLayer("Walls"));
+            if (!hitInfo.collider) {
+                canReachPatrolPoints = true;
+                targetPos = patrolPoint.pos;
+                patrolPointIndexFound = i;
+                break;
+            }
+        }
+
+        if (!canReachPatrolPoints) {
+            //check backtrack points
+            bool canReachBacktrackPoints = false;
+            foreach (var backtrackPoint in backtrackPoints) {
+                var toPoint = backtrackPoint - pos;
+                var hitInfo = Physics2D.CircleCast(pos, radius-0.01f, toPoint.normalized, toPoint.magnitude, 1 << LayerMask.NameToLayer("Walls"));
+                if (!hitInfo.collider) {
+                    canReachBacktrackPoints = true;
+                    targetPos = backtrackPoint;
+                    break;
+                }
+            }
+
+            if (!canReachBacktrackPoints) {
+                Debug.LogWarning("can't backtrack");
+                return;
+            }
+        }
+
+        var toTarget = targetPos - pos;
+        var dir = toTarget.normalized;
+        targetRot = Mathf.Atan2(dir.y, dir.x);
+        pos += dir * Mathf.Min(toTarget.magnitude, walkSpeed * dt);
+        toTarget = targetPos - pos;
+        transform.position = pos;
+        if (toTarget.sqrMagnitude < 0.01f) {
+            transform.position = targetPos;
+            if (canReachPatrolPoints) {
+                currentPoint = patrolPointIndexFound;
+                SetState(EnemyState.WalkingToPoint);
+                return;
+            }
         }
     }
 
@@ -369,7 +468,13 @@ public class Guard : MonoBehaviour {
     }
 
     private void OnDrawGizmos() {
-        Handles.Label(transform.position, currentPoint + ", " + state.ToString() + ", " + pointTimer.ToString("F1"));
+        Handles.Label(transform.position, currentPoint + ", " + state.ToString() + ", " + stateTimer.ToString("F1"));
+    }
+
+    private void OnDrawGizmosSelected() {
+        foreach (var backtrackPoint in backtrackPoints) {
+            Handles.PositionHandle(backtrackPoint, Quaternion.identity);
+        }
     }
 
     public void Init(Player player, Corpses corpses) {
@@ -379,5 +484,41 @@ public class Guard : MonoBehaviour {
 
     public bool CanKill() {
         return state != EnemyState.Chasing && state != EnemyState.Attacking;
+    }
+
+    void UpdateBacktracking() {
+        var pos = transform.position;
+        //can I reach any patrol points?
+        bool canReachPatrolPoints = false;
+        foreach (var patrolPoint in patrolPoints) {
+            var toPoint = patrolPoint.pos - pos;
+            var hitInfo = Physics2D.CircleCast(pos, radius, toPoint.normalized, toPoint.magnitude, 1 << LayerMask.NameToLayer("Walls"));
+            if (!hitInfo.collider) {
+                canReachPatrolPoints = true;
+                break;
+            }
+        }
+
+        if (canReachPatrolPoints) {
+            return;
+        }
+
+        //check backtrack points
+        bool canReachBacktrackPoints = false;
+        foreach (var backtrackPoint in backtrackPoints) {
+            var toPoint = backtrackPoint - pos;
+            var hitInfo = Physics2D.CircleCast(pos, radius, toPoint.normalized, toPoint.magnitude, 1 << LayerMask.NameToLayer("Walls"));
+            if (!hitInfo.collider) {
+                canReachBacktrackPoints = true;
+                break;
+            }
+        }
+
+        if (canReachBacktrackPoints) {
+            return;
+        }
+
+        //should have been able to reach it last frame, so add that position
+        backtrackPoints.Add(prevPos);
     }
 }

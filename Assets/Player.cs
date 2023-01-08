@@ -10,7 +10,8 @@ public enum PlayerState {
     IdleWithCorpse,
     WalkingWithCorpse,
     DroppingCorpse,
-    Dying
+    Dying,
+    Win
 }
 
 public class Player : MonoBehaviour {
@@ -44,6 +45,7 @@ public class Player : MonoBehaviour {
     private Animator animator;
 
     private PowerBox[] powerBoxes;
+    private GameObject goal;
 
     void Awake() {
         cam = Camera.main;
@@ -140,6 +142,10 @@ public class Player : MonoBehaviour {
 
         transform.position = pos;
 
+        if (CheckForGoal()) {
+            return;
+        }
+
         dropPrompt.SetActive(false);
 
         killPrompt.SetActive(currentKillTarget);
@@ -183,8 +189,12 @@ public class Player : MonoBehaviour {
 
         pos = HandleCollision(pos);
         pos = CheckEnemies(pos);
-
+        
         transform.position = pos;
+        
+        if (CheckForGoal()) {
+            return;
+        }
 
         grabPrompt.SetActive(false);
         killPrompt.SetActive(false);
@@ -270,7 +280,11 @@ public class Player : MonoBehaviour {
             }
 
             if (dist < killRange + radius + guard.Radius && guard.CanKill()) {
-                currentKillTarget = guard;
+                //make sure no wall in way
+                var hitInfo = Physics2D.CircleCast(pos, radius, toGuard.normalized, dist, 1 << LayerMask.NameToLayer("Walls"));
+                if (!hitInfo.collider) {
+                    currentKillTarget = guard;
+                }
             }
         }
 
@@ -317,7 +331,8 @@ public class Player : MonoBehaviour {
         }
     }
 
-    public void OnLevelLoaded(Vector3 spawnPos) {
+    public void OnLevelLoaded(Vector3 spawnPos, GameObject goal) {
+        this.goal = goal;
         gameObject.SetActive(true);
         powerBoxes = GameObject.FindObjectsOfType<PowerBox>();
         transform.position = spawnPos;
@@ -344,10 +359,21 @@ public class Player : MonoBehaviour {
             if (toBox.sqrMagnitude < 1 && Vector3.Angle(-powerBox.transform.right, toBox.normalized) < 80) {
                 togglePrompt.SetActive(true);
                 togglePrompt.transform.position = powerBox.transform.position;
-                if (Input.GetKey(KeyCode.K)) {
+                if (Input.GetKey(KeyCode.L)) {
                     powerBox.Toggle();
                 }
             }
         }
+    }
+
+    bool CheckForGoal() {
+        var pos = transform.position;
+        if ((goal.transform.position - pos).sqrMagnitude < 2) {
+            SetState(PlayerState.Win);
+            gameLoop.Win();
+            return true;
+        }
+
+        return false;
     }
 }

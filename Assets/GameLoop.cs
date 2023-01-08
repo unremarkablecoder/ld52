@@ -24,9 +24,11 @@ public class GameLoop : MonoBehaviour {
                 return;
             }
 
+            var goal = GameObject.Find("Goal");
+
             levelWasLoaded = false;
             Debug.Assert(spawn);
-            player.OnLevelLoaded(spawn.transform.position);
+            player.OnLevelLoaded(spawn.transform.position, goal);
             enemies.OnLevelLoaded();
         }
     }
@@ -43,5 +45,8 @@ public class GameLoop : MonoBehaviour {
         loadedLevelIndex = 0;
         blood.Clear();
         corpses.Clear();
+    }
+
+    public void Win() {
     }
 }

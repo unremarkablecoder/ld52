@@ -217,11 +217,19 @@ public class Guard : MonoBehaviour {
         var targetPos = pointToInvestigate;
         var pos = transform.position;
         var toTarget = targetPos - pos;
-        var dir = toTarget.normalized;
-        targetRot = Mathf.Atan2(dir.y, dir.x);
+        var toTargetDir = toTarget.normalized;
+        
+        var hitInfo = Physics2D.CircleCast(pos, radius, toTargetDir, toTarget.magnitude, 1 << LayerMask.NameToLayer("Walls"));
+        if (hitInfo.collider) {
+            targetPos = hitInfo.centroid + hitInfo.normal * 0.5f;
+            toTarget = targetPos - pos;
+            toTargetDir = toTarget.normalized;
+        }
+        
+        targetRot = Mathf.Atan2(toTargetDir.y, toTargetDir.x);
         //just look at first
         if (stateTimer > 1.0f) {
-            pos += dir * (walkSpeed * dt);
+            pos += toTargetDir * (walkSpeed * dt);
             transform.position = pos;
             if (toTarget.sqrMagnitude < 0.01f) {
                 SetState(EnemyState.LookingAround);

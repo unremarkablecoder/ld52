@@ -39,6 +39,10 @@ public class GameLoop : MonoBehaviour {
             if (Input.GetKeyUp(KeyCode.Alpha4)) {
                 LoadLevel(4);
             }
+            
+            if (Input.GetKeyUp(KeyCode.Alpha5)) {
+                LoadLevel(5);
+            }
         }
 
         if (levelWasLoaded) {

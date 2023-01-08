@@ -484,8 +484,8 @@ public class Guard : MonoBehaviour {
     bool ActOnPlayerVision(float dt) {
         if (playerInVision) {
             alertVisionLength = Mathf.Min(visionLength, alertVisionLength + alertSpeed * dt);
-            pointToInvestigate = player.transform.position;
             if (playerInAlertVision) {
+                pointToInvestigate = player.transform.position;
                 return true;
             }
             else {

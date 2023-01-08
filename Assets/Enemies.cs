@@ -17,6 +17,7 @@ public class Enemies : MonoBehaviour {
 
     void Update() {
         if (guards == null) {
+            audioManager.SetAlert(false);
             return;
         }
         foreach (var guard in guards) {
@@ -43,5 +44,9 @@ public class Enemies : MonoBehaviour {
     public void RemoveGuard(Guard guard) {
         guards.Remove(guard);
         Destroy(guard.gameObject);
+    }
+
+    public void Unload() {
+        guards.Clear();
     }
 }

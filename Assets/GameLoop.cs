@@ -12,9 +12,14 @@ public class GameLoop : MonoBehaviour {
     [SerializeField] private GameObject winScreen;
     [SerializeField] private GameObject dieScreen;
     [SerializeField] private GameObject levelSelectScreen;
+    private AudioManager audioManager;
 
     private bool levelWasLoaded = false;
     private int loadedLevelIndex = 0;
+
+    void Awake() {
+        audioManager = FindObjectOfType<AudioManager>();
+    }
     
     private void Update() {
         if (Input.GetKeyUp(KeyCode.Alpha1)) {
@@ -61,11 +66,16 @@ public class GameLoop : MonoBehaviour {
         UnloadLevel();
         dieScreen.SetActive(true);
         levelSelectScreen.SetActive(true);
+        audioManager.SetAlert(false);
+        enemies.Unload();
+        
     }
 
     public void Win() {
         UnloadLevel();
         winScreen.SetActive(true);
         levelSelectScreen.SetActive(true);
+        audioManager.SetAlert(false);
+        enemies.Unload();
     }
 }

@@ -23,6 +23,8 @@ public class AudioManager : MonoBehaviour {
     private AudioSource musicAlertSound;
     private bool alert = false;
 
+    private float alertFade = 0;
+
     public void Play(AudioSource source) {
         var sound = Instantiate(source);
         Destroy(sound.gameObject, sound.clip.length);
@@ -32,6 +34,8 @@ public class AudioManager : MonoBehaviour {
         musicNormalSound = Instantiate(musicNormal);
         musicAlertSound = Instantiate(musicAlert);
         musicNormalSound.Play();
+        musicAlertSound.volume = 0;
+        musicAlertSound.Play();
     }
 
     public void SetAlert(bool alert) {
@@ -39,6 +43,16 @@ public class AudioManager : MonoBehaviour {
     }
 
     private void Update() {
+        const float fadeSpeed = 2;
+        if (alert) {
+            alertFade = Mathf.Min(1.0f, alertFade + fadeSpeed * Time.deltaTime);
+        }
+        else {
+            alertFade = Mathf.Max(0.0f, alertFade - fadeSpeed * Time.deltaTime);
+        }
+
+        musicNormalSound.volume = 1.0f - alertFade;
+        musicAlertSound.volume = alertFade;
     }
 }
 

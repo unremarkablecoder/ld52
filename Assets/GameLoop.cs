@@ -9,10 +9,12 @@ public class GameLoop : MonoBehaviour {
     [SerializeField] private Enemies enemies;
     [SerializeField] private Blood blood;
     [SerializeField] private Corpses corpses;
+    [SerializeField] private GameObject winScreen;
+    [SerializeField] private GameObject dieScreen;
 
     private bool levelWasLoaded = false;
     private int loadedLevelIndex = 0;
-
+    
     private void Update() {
         if (Input.GetKeyUp(KeyCode.Return)) {
            LoadLevel(1); 
@@ -34,19 +36,29 @@ public class GameLoop : MonoBehaviour {
     }
 
     public void LoadLevel(int level) {
+        winScreen.SetActive(false);
+        dieScreen.SetActive(false);
+        
         loadedLevelIndex = level;
         SceneManager.LoadScene(level, LoadSceneMode.Additive);
 
         levelWasLoaded = true;
     }
-    
-    public void Die() {
+
+    void UnloadLevel() {
         SceneManager.UnloadSceneAsync(loadedLevelIndex);
         loadedLevelIndex = 0;
         blood.Clear();
         corpses.Clear();
     }
+    
+    public void Die() {
+        UnloadLevel();
+        dieScreen.SetActive(true);
+    }
 
     public void Win() {
+        UnloadLevel();
+        winScreen.SetActive(true);
     }
 }

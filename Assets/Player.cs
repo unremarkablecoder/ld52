@@ -371,6 +371,11 @@ public class Player : MonoBehaviour {
         if ((goal.transform.position - pos).sqrMagnitude < 2) {
             SetState(PlayerState.Win);
             gameLoop.Win();
+            dropPrompt.SetActive(false);
+            killPrompt.SetActive(false);
+            dropPrompt.SetActive(false);
+            togglePrompt.SetActive(false);
+            gameObject.SetActive(false);
             return true;
         }
 

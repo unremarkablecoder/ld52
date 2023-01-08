@@ -131,9 +131,14 @@ public class Guard : MonoBehaviour {
         var lookDir = patrolPoints[currentPoint].lookDir;
         targetRot = Mathf.Atan2(lookDir.y, lookDir.x);
         if (stateTimer >= patrolPoints[currentPoint].timeToStay) {
-            currentPoint = (currentPoint + 1) % patrolPoints.Length;
-            SetState(EnemyState.WalkingToPoint);
-            return;
+            if (patrolPoints.Length > 1) {
+                currentPoint = (currentPoint + 1) % patrolPoints.Length;
+                SetState(EnemyState.WalkingToPoint);
+                return;
+            }
+            else {
+                stateTimer = 0;
+            }
         }
 
         if (ActOnPlayerVision(dt)) {
